@@ -54,7 +54,7 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_HRTIM_PollForDLLCalibration(&hhrtim1, 10) != HAL_OK)
+  if (HAL_HRTIM_PollForDLLCalibration(&hhrtim1, 100) != HAL_OK)
   {
     Error_Handler();
   }

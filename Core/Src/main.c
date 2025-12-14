@@ -21,6 +21,7 @@
 #include "hrtim.h"
 #include "i2c.h"
 #include "spi.h"
+#include "stm32g4xx_hal.h"
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
@@ -34,6 +35,7 @@
 /* 全局变量用于存储 中断次数 */
 volatile int32_t num_10us = 0;
 volatile int32_t num_30us = 0;
+volatile int RCC_init_flag = 0;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -110,7 +112,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  RCC_init_flag = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -146,14 +148,29 @@ int main(void)
   // MX_SPI3_Init();
   // MX_USART1_UART_Init();
   MX_USB_Device_Init();
+  HAL_Delay(5000);
 
   char msg[64];
-
+  if(RCC_init_flag==1){
+    sprintf(msg, "RCC init succeed!\r\n");
+    CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+  }
+  sprintf(msg, "HRTIM Start config\r\n");
+  CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+  HAL_Delay(1000);
   // 这一步直接操作 TIMADIER 寄存器，确保门控打开
   __HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
 
   // 1. 启动 Timer A 的计数器，并使能中断
-  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A);
+  // 修改参数为 TIMERINDEX，并检查返回值
+  if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A) != HAL_OK)
+  {
+      Error_Handler(); // 如果启动失败，进入错误处理
+  }
+  else{
+      sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
+      CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+  }
 
   // 2. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
   // 如果你只用 TA1，可以只写 HRTIM_OUTPUT_TA1
@@ -223,6 +240,9 @@ void SystemClock_Config(void)
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
   {
     Error_Handler();
+  }
+  else {
+    RCC_init_flag = 1;
   }
 }
 
