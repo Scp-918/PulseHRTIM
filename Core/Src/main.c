@@ -32,8 +32,8 @@
 #include <stdio.h>
 
 /* 全局变量用于存储 中断次数 */
+volatile int32_t num_10us = 0;
 volatile int32_t num_30us = 0;
-volatile int32_t num_100us = 0;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -139,7 +139,7 @@ int main(void)
   // MX_USB_Device_Init();
   /* USER CODE BEGIN 2 */
   MX_GPIO_Init();
-  // MX_HRTIM1_Init();
+  MX_HRTIM1_Init();
   // MX_I2C3_Init();
   // MX_SPI1_Init();
   // MX_SPI3_Init();
@@ -147,6 +147,13 @@ int main(void)
   MX_USB_Device_Init();
 
   char msg[64];
+
+  // 1. 启动 Timer A 的计数器，并使能中断
+  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A);
+
+  // 2. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
+  // 如果你只用 TA1，可以只写 HRTIM_OUTPUT_TA1
+  HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -154,10 +161,17 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+    /* USER CODE BEGIN 3 */
     sprintf(msg, "while\r\n");
     CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+    // 格式化输出字符串
+    // 显示当前的计数值，理论上每秒应该打印出 "CMP1: 1000, CMP2: 1000"
+    sprintf(msg, "CMP1(10us): %ld, CMP2(30us): %ld\r\n", (long)num_10us, (long)num_30us);
+    
+    // 发送数据
+    CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
     HAL_Delay(1000);
-    /* USER CODE BEGIN 3 */
+
   }
   /* USER CODE END 3 */
 }
@@ -209,7 +223,24 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+// 处理 Compare Unit 1 事件 (对应配置的 360 ticks, 即 10us)
+void HAL_HRTIM_Compare1EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
+{
+    // 判断是否是 Timer A 产生的中断
+    if (TimerIdx == HRTIM_TIMERINDEX_TIMER_A)
+    {
+        num_10us++; // 这里对应 10us 事件
+    }
+}
 
+// 处理 Compare Unit 2 事件 (对应配置的 1080 ticks, 即 30us)
+void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
+{
+    if (TimerIdx == HRTIM_TIMERINDEX_TIMER_A)
+    {
+        num_30us++;  // 这里对应 30us 事件
+    }
+}
 /* USER CODE END 4 */
 
 /**
