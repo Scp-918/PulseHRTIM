@@ -158,6 +158,9 @@ int main(void)
   sprintf(msg, "HRTIM Start config\r\n");
   CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
   HAL_Delay(1000);
+
+  // [新增步骤]：手动触发更新事件，将预装载寄存器值加载到影子寄存器
+  HAL_HRTIM_SoftwareUpdate(&hhrtim1, HRTIM_TIMERUPDATE_MASTER | HRTIM_TIMERUPDATE_A);
   // 这一步直接操作 TIMADIER 寄存器，确保门控打开
   __HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
 
