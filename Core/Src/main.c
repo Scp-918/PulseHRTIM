@@ -138,6 +138,7 @@ int main(void)
   // MX_USART1_UART_Init();
   // MX_USB_Device_Init();
   /* USER CODE BEGIN 2 */
+  __HAL_RCC_HRTIM1_CLK_ENABLE();
   MX_GPIO_Init();
   MX_HRTIM1_Init();
   // MX_I2C3_Init();
@@ -147,6 +148,9 @@ int main(void)
   MX_USB_Device_Init();
 
   char msg[64];
+
+  // 这一步直接操作 TIMADIER 寄存器，确保门控打开
+  __HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
 
   // 1. 启动 Timer A 的计数器，并使能中断
   HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A);
