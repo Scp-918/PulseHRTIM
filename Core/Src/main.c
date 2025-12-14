@@ -161,7 +161,9 @@ int main(void)
   // 这一步直接操作 TIMADIER 寄存器，确保门控打开
   __HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
 
-  // 1. 启动 Timer A 的计数器，并使能中断
+  // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
+  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERINDEX_MASTER);
+  // 2. 启动 Timer A 的计数器，并使能中断
   // 修改参数为 TIMERINDEX，并检查返回值
   if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A) != HAL_OK)
   {
@@ -172,7 +174,7 @@ int main(void)
       CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
   }
 
-  // 2. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
+  // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
   // 如果你只用 TA1，可以只写 HRTIM_OUTPUT_TA1
   HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
   /* USER CODE END 2 */
