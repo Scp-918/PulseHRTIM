@@ -35,7 +35,6 @@
 /* 全局变量用于存储 中断次数 */
 volatile int32_t num_10us = 0;
 volatile int32_t num_30us = 0;
-volatile int RCC_init_flag = 0;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -112,7 +111,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  RCC_init_flag = 0;
+  num_10us = 0;
+  num_30us = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -150,10 +150,6 @@ int main(void)
   HAL_Delay(5000);
 
   char msg[64];
-  if(RCC_init_flag==1){
-    sprintf(msg, "RCC init succeed!\r\n");
-    CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
-  }
   sprintf(msg, "HRTIM Start config\r\n");
   CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
   HAL_Delay(1000);
@@ -161,13 +157,13 @@ int main(void)
   // [新增步骤]：手动触发更新事件，将预装载寄存器值加载到影子寄存器
   //HAL_HRTIM_SoftwareUpdate(&hhrtim1, HRTIM_TIMERUPDATE_MASTER | HRTIM_TIMERUPDATE_A);
   // 这一步直接操作 TIMADIER 寄存器，确保门控打开
-  __HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
+  //__HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
 
   // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
-  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERINDEX_MASTER);
+  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
   // 2. 启动 Timer A 的计数器，并使能中断
   // 修改参数为 TIMERINDEX，并检查返回值
-  if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A) != HAL_OK)
+  if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
   {
       Error_Handler(); // 如果启动失败，进入错误处理
   }
@@ -265,9 +261,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  else {
-    RCC_init_flag = 1;
-  }
+
 }
 
 /* USER CODE BEGIN 4 */
