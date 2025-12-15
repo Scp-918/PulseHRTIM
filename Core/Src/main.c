@@ -140,7 +140,6 @@ int main(void)
   // MX_USART1_UART_Init();
   // MX_USB_Device_Init();
   /* USER CODE BEGIN 2 */
-  __HAL_RCC_HRTIM1_CLK_ENABLE();
   MX_GPIO_Init();
   MX_HRTIM1_Init();
   // MX_I2C3_Init();
@@ -160,7 +159,7 @@ int main(void)
   HAL_Delay(1000);
 
   // [新增步骤]：手动触发更新事件，将预装载寄存器值加载到影子寄存器
-  HAL_HRTIM_SoftwareUpdate(&hhrtim1, HRTIM_TIMERUPDATE_MASTER | HRTIM_TIMERUPDATE_A);
+  //HAL_HRTIM_SoftwareUpdate(&hhrtim1, HRTIM_TIMERUPDATE_MASTER | HRTIM_TIMERUPDATE_A);
   // 这一步直接操作 TIMADIER 寄存器，确保门控打开
   __HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
 
@@ -188,6 +187,26 @@ int main(void)
   {
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
+    // 循环尝试启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
+    // if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERINDEX_MASTER)!= HAL_OK){
+    //     Error_Handler(); // 如果启动失败，进入错误处理
+    // }
+    // else{
+    //     sprintf(msg, "HRTIM Timer master started with interrupt!\r\n");
+    //     CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+    // }
+    // // 2. 启动 Timer A 的计数器，并使能中断
+    // // 修改参数为 TIMERINDEX，并检查返回值
+    // if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A) != HAL_OK)
+    // {
+    //     Error_Handler(); // 如果启动失败，进入错误处理
+    // }
+    // else{
+    //     sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
+    //     CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+    // }
+
+
     sprintf(msg, "while\r\n");
     CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
     // 格式化输出字符串
