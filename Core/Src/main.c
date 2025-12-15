@@ -21,7 +21,6 @@
 #include "hrtim.h"
 #include "i2c.h"
 #include "spi.h"
-#include "stm32g4xx_hal.h"
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
@@ -156,8 +155,7 @@ int main(void)
 
   // [新增步骤]：手动触发更新事件，将预装载寄存器值加载到影子寄存器
   //HAL_HRTIM_SoftwareUpdate(&hhrtim1, HRTIM_TIMERUPDATE_MASTER | HRTIM_TIMERUPDATE_A);
-  // 这一步直接操作 TIMADIER 寄存器，确保门控打开
-  //__HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
+
 
   // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
   HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
@@ -172,6 +170,9 @@ int main(void)
       CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
   }
 
+    // 这一步直接操作 TIMADIER 寄存器，确保门控打开
+  __HAL_HRTIM_TIMER_ENABLE_IT(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_TIM_IT_CMP1 | HRTIM_TIM_IT_CMP2);
+
   // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
   // 如果你只用 TA1，可以只写 HRTIM_OUTPUT_TA1
   HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
@@ -182,6 +183,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
     // 循环尝试启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
     // if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERINDEX_MASTER)!= HAL_OK){
@@ -261,7 +263,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-
 }
 
 /* USER CODE BEGIN 4 */
