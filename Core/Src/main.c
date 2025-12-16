@@ -179,21 +179,20 @@ int main(void)
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   HAL_Delay(1000);
 
-  // //2. AD4007 初始化
-  // char msg[64];
-  // if (AD4007_Init_Safe() == HAL_OK) {
-  //     strcpy(msg, "System Ready: AD4007 OK\r\n");
-  // } else {
-  //     strcpy(msg, "System Ready: AD4007 FAIL\r\n");
-  // }
-  // HAL_Delay(1000); // 等待USB连接稳定
-  // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+  //2. AD4007 初始化
+  if (AD4007_Init_Safe() == HAL_OK) {
+      strcpy(msg, "System Ready: AD4007 OK\r\n");
+  } else {
+      strcpy(msg, "System Ready: AD4007 FAIL\r\n");
+  }
+  HAL_Delay(1000); // 等待USB连接稳定
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
 
-  // // 3. 初始读取一次 ADC，验证功能
-  // int32_t code = AD4007_Read_Single();
-  // float voltage = AD4007_ConvertToVoltage(code);
-  // sprintf(msg, "ADC:%.4f V\r\n", voltage);
-  // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));  
+  // 3. 初始读取一次 ADC，验证功能
+  int32_t code = AD4007_Read_Single();
+  float voltage = AD4007_ConvertToVoltage(code);
+  sprintf(msg, "ADC:%.4f V\r\n", voltage);
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
 
   // // 3.[修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
   // GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -243,7 +242,12 @@ int main(void)
     // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
     //PA8设为高电平
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-    HAL_Delay(5);
+    HAL_Delay(2);
+    int32_t code2 = AD4007_Read_Single();
+    float voltage2 = AD4007_ConvertToVoltage(code2);
+    sprintf(msg, "ADC:%.4f V\r\n", voltage2);
+    HAL_Delay(3);
+    CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
     sprintf(msg, "CMP1(10us)\r\n");
     CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
