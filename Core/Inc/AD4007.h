@@ -20,7 +20,9 @@ extern "C" {
 HAL_StatusTypeDef AD4007_Init_Safe(void); // 改名为 Safe，强调无死循环
 int32_t AD4007_Read_Single(void);
 float AD4007_ConvertToVoltage(int32_t code);
-int32_t AD4007_Read_SPI_Only(void);
+uint32_t AD4007_Read_SPI_Only(void);
+float AD4007_ConvertToVoltage_SPI(uint32_t adc_raw_code);
+uint32_t AD4007_Read_Single2(void);
 
 #ifdef __cplusplus
 }
