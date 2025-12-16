@@ -72,23 +72,24 @@ HAL_StatusTypeDef AD4007_Init_Safe(void)
         AD4007_Delay_Short(); 
 
         // 3. 读取验证 (发送 0xFF)
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-        
-        // 使用 TransmitReceive 替代 Receive
-        if (HAL_SPI_TransmitReceive(&hspi3, tx_dummy, rx_buffer, 3, 10) == HAL_OK)
-        {
-            // 验证数据非空 (Status bit 5 应该为 1，即 rx_buffer[2] & 0x20)
-            if ((rx_buffer[0] != 0xFF) && (rx_buffer[0] != 0x00))
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+            
+            if (HAL_SPI_TransmitReceive(&hspi3, tx_dummy, rx_buffer, 3, 10) == HAL_OK)
             {
-                // 结束读取，此时 MOSI 为高 (因为发了 0xFF)，保持 CS 模式
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-                return HAL_OK; 
+                // [修复]：0x00 是代表 0V 的有效数据，不应视为错误。
+                // 只要不是全 0xFF (通常意味着 MISO 悬空高电平)，就认为 SPI 连通了。
+                // 如果你想更严谨，可以检查 rx_buffer[2] 的低位状态，但仅排除 0xFF 通常足够。
+                
+                if (rx_buffer[0] != 0xFF) 
+                {
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+                    return HAL_OK; 
+                }
             }
+            
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+            HAL_Delay(10);
         }
-        
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-        HAL_Delay(10);
-    }
 
     return HAL_ERROR;
 }

@@ -149,7 +149,7 @@ int main(void)
   // MX_HRTIM1_Init();
   // MX_I2C3_Init();
   // MX_SPI1_Init();
-  // MX_SPI3_Init();
+  MX_SPI3_Init();
   // MX_USART1_UART_Init();
   MX_USB_Device_Init();
 
@@ -242,11 +242,11 @@ int main(void)
     // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
     //PA8设为高电平
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-    HAL_Delay(2);
+    HAL_Delay(1);
     int32_t code2 = AD4007_Read_Single();
     float voltage2 = AD4007_ConvertToVoltage(code2);
     sprintf(msg, "ADC:%.4f V\r\n", voltage2);
-    HAL_Delay(3);
+    HAL_Delay(4);
     CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
     sprintf(msg, "CMP1(10us)\r\n");
