@@ -31,7 +31,10 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+// 注意：APP_TX_DATA_SIZE 在 usbd_cdc_if.h 中定义，通常为 2048
+volatile uint32_t UserTxBufPtrIn = 0;  // 写入指针 (Head)
+volatile uint32_t UserTxBufPtrOut = 0; // 读出/发送指针 (Tail)
+volatile uint8_t  UserTxBufBusy = 0;   // 发送忙标志
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -128,7 +131,58 @@ static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 static int8_t CDC_TransmitCplt_FS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
+uint8_t CDC_Transmit_FS2(uint8_t* Buf, uint16_t Len)
+{
+  uint8_t result = USBD_OK;
+  /* USER CODE BEGIN 7 */
+  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
+  
+  // 1. 检查参数
+  if (hcdc == NULL || hcdc->TxState != 0 && UserTxBufBusy == 0) {
+      return USBD_BUSY;
+  }
 
+  // 2. 将用户数据填入环形缓冲区
+  for (int i = 0; i < Len; i++) {
+      UserTxBufferFS[UserTxBufPtrIn] = Buf[i];
+      UserTxBufPtrIn++;
+      // 处理环形回绕
+      if (UserTxBufPtrIn == APP_TX_DATA_SIZE) {
+          UserTxBufPtrIn = 0;
+      }
+      
+      // 检查缓冲区溢出（可选：如果追上输出指针，则丢弃或返回错误）
+      if (UserTxBufPtrIn == UserTxBufPtrOut) {
+          return USBD_FAIL; // 缓冲区满
+      }
+  }
+
+  // 3. 如果当前 USB 空闲，立即启动发送
+  if (UserTxBufBusy == 0) {
+      uint32_t size_to_send = 0;
+      
+      // 计算本次需要发送的长度（处理环形缓冲区的回绕问题）
+      if (UserTxBufPtrIn > UserTxBufPtrOut) {
+          size_to_send = UserTxBufPtrIn - UserTxBufPtrOut;
+      } else if (UserTxBufPtrIn < UserTxBufPtrOut) {
+          // 如果回绕，先发送从 Out 到 缓冲区末尾 的部分
+          size_to_send = APP_TX_DATA_SIZE - UserTxBufPtrOut;
+      } else {
+          // 指针相等，无数据
+          return USBD_OK;
+      }
+
+      // 设置 USB 发送缓冲区指针指向环形缓冲区的当前读取位置
+      USBD_CDC_SetTxBuffer(&hUsbDeviceFS, &UserTxBufferFS[UserTxBufPtrOut], size_to_send);
+      
+      // 标记为忙，并启动发送
+      UserTxBufBusy = 1;
+      result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
+  }
+
+  /* USER CODE END 7 */
+  return result;
+}
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
 /**
@@ -311,6 +365,36 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
   UNUSED(Buf);
   UNUSED(Len);
   UNUSED(epnum);
+
+  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
+
+  // 1. 更新读出指针 (UserTxBufPtrOut)
+  // 注意：此时 hcdc->TxLength 存储了上一次发送的长度
+  UserTxBufPtrOut += hcdc->TxLength;
+  if (UserTxBufPtrOut >= APP_TX_DATA_SIZE) {
+      UserTxBufPtrOut -= APP_TX_DATA_SIZE;
+  }
+
+  // 2. 检查是否还有剩余数据需要发送
+  if (UserTxBufPtrIn != UserTxBufPtrOut) {
+      uint32_t size_to_send = 0;
+
+      if (UserTxBufPtrIn > UserTxBufPtrOut) {
+          size_to_send = UserTxBufPtrIn - UserTxBufPtrOut;
+      } else {
+          // 遇到回绕，先发尾部
+          size_to_send = APP_TX_DATA_SIZE - UserTxBufPtrOut;
+      }
+
+      // 再次设置发送缓冲区并启动下一次传输
+      USBD_CDC_SetTxBuffer(&hUsbDeviceFS, &UserTxBufferFS[UserTxBufPtrOut], size_to_send);
+      result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
+      
+      // 保持忙状态 UserTxBufBusy = 1;
+  } else {
+      // 数据全部发完，释放忙标志
+      UserTxBufBusy = 0;
+  }
   /* USER CODE END 13 */
   return result;
 }

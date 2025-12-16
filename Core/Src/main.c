@@ -176,7 +176,7 @@ int main(void)
   TMUX_KB_SetChannel(TMUX_CH_S7);
 
   sprintf(msg, "GPIO Start config\r\n");
-  CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   HAL_Delay(1000);
 
   // //2. AD4007 初始化
@@ -243,11 +243,11 @@ int main(void)
     // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
     //PA8设为高电平
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-    HAL_Delay(100);
+    HAL_Delay(5);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
     sprintf(msg, "CMP1(10us)\r\n");
-    CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
-    HAL_Delay(100);
+    CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+    HAL_Delay(95);
 
   }
   /* USER CODE END 3 */
