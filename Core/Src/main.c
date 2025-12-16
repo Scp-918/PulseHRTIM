@@ -195,37 +195,37 @@ int main(void)
   // sprintf(msg, "ADC:%.4f V\r\n", voltage);
   // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));  
 
-  // // [修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
-  // GPIO_InitTypeDef GPIO_InitStruct = {0};
-  // __HAL_RCC_GPIOA_CLK_ENABLE();
+  // 3.[修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   
-  // // PA8 -> HRTIM_CHA1, PA9 -> HRTIM_CHA2
-  // GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
-  // GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;       // 复用推挽输出
-  // GPIO_InitStruct.Pull = GPIO_NOPULL;
-  // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  // GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
-  // HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  // PA8 -> HRTIM_CHA1, PA9 -> HRTIM_CHA2
+  GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;       // 复用推挽输出
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   
-  // // 初始化 HRTIM1
-  // MX_HRTIM1_Init();
+  // 初始化 HRTIM1
+  MX_HRTIM1_Init();
   
-  // // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
-  // HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
-  // // 2. 启动 Timer A 的计数器，并使能中断
-  // // 修改参数为 TIMERINDEX，并检查返回值
-  // if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
-  // {
-  //     Error_Handler(); // 如果启动失败，进入错误处理
-  // }
-  // else{
-  //     sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
-  //     CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
-  // }
+  // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
+  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
+  // 2. 启动 Timer A 的计数器，并使能中断
+  // 修改参数为 TIMERINDEX，并检查返回值
+  if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
+  {
+      Error_Handler(); // 如果启动失败，进入错误处理
+  }
+  else{
+      sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
+      CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+  }
 
-  // // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
-  // // 如果你只用 TA1，可以只写 HRTIM_OUTPUT_TA1
-  // HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
+  // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
+  // 如果你只用 TA1，可以只写 HRTIM_OUTPUT_TA1
+  HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -237,17 +237,17 @@ int main(void)
     /* USER CODE BEGIN 3 */
     // 格式化输出字符串
     // 显示当前的计数值，理论上每秒应该打印出 "CMP1: 1000, CMP2: 1000"
-    //sprintf(msg, "CMP1(10us): %ld, CMP2(30us): %ld\r\n", (long)num_10us, (long)num_30us);
+    sprintf(msg, "CMP1(10us): %ld, CMP2(30us): %ld\r\n", (long)num_10us, (long)num_30us);
     
-    // 发送数据
-    //CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
-    //PA8设为高电平
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-    HAL_Delay(10);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-    sprintf(msg, "CMP1(10us)\r\n");
+    //发送数据
     CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
-    HAL_Delay(90);
+    // //PA8设为高电平
+    // HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+    // HAL_Delay(10);
+    // HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+    // sprintf(msg, "CMP1(10us)\r\n");
+    // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+    HAL_Delay(1000);
 
   }
   /* USER CODE END 3 */
