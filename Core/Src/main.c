@@ -34,8 +34,8 @@
 #include "AD4007.h" 
 
 /* 全局变量用于存储 中断次数 */
-volatile int32_t num_10us = 0;
-volatile int32_t num_30us = 0;
+volatile int32_t num_3us = 0;
+volatile int32_t num_300us = 0;
 /* 全局变量用于存储 ADC 结果 */
 volatile int32_t adc_raw_3us = 0;
 volatile int32_t adc_raw_300us = 0;
@@ -116,8 +116,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  num_10us = 0;
-  num_30us = 0;
+  num_3us = 0;
+  num_300us = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -149,7 +149,7 @@ int main(void)
   // MX_HRTIM1_Init();
   // MX_I2C3_Init();
   // MX_SPI1_Init();
-  MX_SPI3_Init();
+  //MX_SPI3_Init();
   // MX_USART1_UART_Init();
   MX_USB_Device_Init();
 
@@ -179,52 +179,51 @@ int main(void)
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   HAL_Delay(1000);
 
-  //2. AD4007 初始化
-  if (AD4007_Init_Safe() == HAL_OK) {
-      strcpy(msg, "System Ready: AD4007 OK\r\n");
-  } else {
-      strcpy(msg, "System Ready: AD4007 FAIL\r\n");
+  // //2. AD4007 初始化
+  // if (AD4007_Init_Safe() == HAL_OK) {
+  //     strcpy(msg, "System Ready: AD4007 OK\r\n");
+  // } else {
+  //     strcpy(msg, "System Ready: AD4007 FAIL\r\n");
+  // }
+  // HAL_Delay(1000); // 等待USB连接稳定
+  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+
+  // // 3. 初始读取一次 ADC，验证功能
+  // int32_t code = AD4007_Read_Single();
+  // float voltage = AD4007_ConvertToVoltage(code);
+  // sprintf(msg, "ADC:%.4f V\r\n", voltage);
+  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
+
+  // 3.[修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  
+  // PA8 -> HRTIM_CHA1, PA9 -> HRTIM_CHA2
+  GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;       // 复用推挽输出
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  
+  // 初始化 HRTIM1
+  MX_HRTIM1_Init();
+  
+  // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
+  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
+  // 2. 启动 Timer A 的计数器，并使能中断
+  // 修改参数为 TIMERINDEX，并检查返回值
+  if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
+  {
+      Error_Handler(); // 如果启动失败，进入错误处理
   }
-  HAL_Delay(1000); // 等待USB连接稳定
-  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  else{
+      sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
+      CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  }
 
-  // 3. 初始读取一次 ADC，验证功能
-  int32_t code = AD4007_Read_Single();
-  float voltage = AD4007_ConvertToVoltage(code);
-  sprintf(msg, "ADC:%.4f V\r\n", voltage);
-  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
-
-  // // 3.[修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
-  // GPIO_InitTypeDef GPIO_InitStruct = {0};
-  // __HAL_RCC_GPIOA_CLK_ENABLE();
-  
-  // // PA8 -> HRTIM_CHA1, PA9 -> HRTIM_CHA2
-  // GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
-  // GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;       // 复用推挽输出
-  // GPIO_InitStruct.Pull = GPIO_NOPULL;
-  // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  // GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
-  // HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-  
-  // // 初始化 HRTIM1
-  // MX_HRTIM1_Init();
-  
-  // // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
-  // HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
-  // // 2. 启动 Timer A 的计数器，并使能中断
-  // // 修改参数为 TIMERINDEX，并检查返回值
-  // if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
-  // {
-  //     Error_Handler(); // 如果启动失败，进入错误处理
-  // }
-  // else{
-  //     sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
-  //     CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
-  // }
-
-  // // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
-  // // 如果你只用 TA1，可以只写 HRTIM_OUTPUT_TA1
-  // HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
+  // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
+  HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -234,24 +233,25 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    // 格式化输出字符串
-    // 显示当前的计数值，理论上每秒应该打印出 "CMP1: 1000, CMP2: 1000"
-    // sprintf(msg, "CMP1(10us): %ld, CMP2(30us): %ld\r\n", (long)num_10us, (long)num_30us);
+    //格式化输出字符串
+    //显示当前的计数值，理论上每秒应该打印出 "CMP1: 1000, CMP2: 1000"
+    sprintf(msg, "CMP1(3us): %ld, CMP2(300us): %ld\r\n", (long)num_3us, (long)num_300us);
     
-    // //发送数据
-    // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
-    //PA8设为高电平
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-    HAL_Delay(1);
-    int32_t code2 = AD4007_Read_Single();
-    float voltage2 = AD4007_ConvertToVoltage(code2);
-    sprintf(msg, "ADC:%.4f V\r\n", voltage2);
-    HAL_Delay(4);
-    CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-    sprintf(msg, "CMP1(10us)\r\n");
-    CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    HAL_Delay(95);
+    //发送数据
+    CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
+    HAL_Delay(1000);
+    // //PA8设为高电平
+    // HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+    // HAL_Delay(1);
+    // int32_t code2 = AD4007_Read_Single();
+    // float voltage2 = AD4007_ConvertToVoltage(code2);
+    // sprintf(msg, "ADC:%.4f V\r\n", voltage2);
+    // HAL_Delay(4);
+    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+    // HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+    // sprintf(msg, "CMP1(10us)\r\n");
+    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+    // HAL_Delay(95);
 
   }
   /* USER CODE END 3 */
@@ -304,22 +304,22 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-// 处理 Compare Unit 1 事件 (对应配置的 360 ticks, 即 10us)
-void HAL_HRTIM_Compare1EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
+// 处理 Compare Unit 2 事件 (对应配置的 504 ticks, 即 3.5us)
+void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
 {
     // 判断是否是 Timer A 产生的中断
     if (TimerIdx == HRTIM_TIMERINDEX_TIMER_A)
     {
-        num_10us++; // 这里对应 10us 事件
+        num_3us++; // 这里对应 3us 事件
     }
 }
 
-// 处理 Compare Unit 2 事件 (对应配置的 1080 ticks, 即 30us)
-void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
+// 处理 Compare Unit 4 事件 (对应配置的 43272 ticks, 即 300us)
+void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
 {
     if (TimerIdx == HRTIM_TIMERINDEX_TIMER_A)
     {
-        num_30us++;  // 这里对应 30us 事件
+        num_300us++;  // 这里对应 300us 事件
     }
 }
 /* USER CODE END 4 */
