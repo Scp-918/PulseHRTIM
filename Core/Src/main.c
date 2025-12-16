@@ -209,8 +209,7 @@ int main(void)
   // 初始化 HRTIM1
   MX_HRTIM1_Init();
   
-  // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
-  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
+
   // 2. 启动 Timer A 的计数器，并使能中断
   // 修改参数为 TIMERINDEX，并检查返回值
   if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
@@ -224,6 +223,12 @@ int main(void)
 
   // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
   HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
+
+    // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
+  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
+
+  sprintf(msg, "HRTIM Started System-Wide\r\n");
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   /* USER CODE END 2 */
 
   /* Infinite loop */
