@@ -42,6 +42,7 @@ volatile uint32_t adc_raw_300us = 0;
 volatile float adc_voltage_3us = 0;
 volatile float adc_voltage_300us = 0;
 volatile uint8_t measure_done = 0;
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -124,6 +125,7 @@ int main(void)
   adc_raw_300us = 0;
   adc_voltage_3us = 0;
   adc_voltage_300us = 0;
+  uint8_t data_frame[11];
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -276,10 +278,59 @@ int main(void)
     // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
     // HAL_Delay(95);
 
-    //分别输出 3us 和 300us 的 ADC 结果
-    sprintf(msg, "ADC 3us:%.4f V, ADC 300us:%.4f V\r\n", adc_voltage_3us, adc_voltage_300us);
-    CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    HAL_Delay(1000);
+    // //分别输出 3us 和 300us 的 ADC 结果
+    // sprintf(msg, "ADC 3us:%.4f V, ADC 300us:%.4f V\r\n", adc_voltage_3us, adc_voltage_300us);
+    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+    // //显示当前的计数值，理论上每秒应该打印出 "CMP1: 1000, CMP2: 1000"
+    // sprintf(msg, "CMP1(3us): %ld, CMP2(300us): %ld\r\n", (long)num_3us, (long)num_300us);
+    // // //发送数据
+    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+    // HAL_Delay(1000);
+
+    // --- 1. 原子读取全局变量 ---
+    // 这里的变量在 HRTIM 中断中更新，读取时需关中断防止数据撕裂
+    uint32_t temp_3us, temp_300us;
+    
+    __disable_irq(); // 进入临界区
+    temp_3us = adc_raw_3us;
+    temp_300us = adc_raw_300us;
+    __enable_irq();  // 退出临界区
+
+    // --- 2. 填充帧头 ---
+    data_frame[0] = 0xAA;
+    data_frame[1] = 0xBB;
+
+    // --- 3. 填充数据 (各3字节, 大端模式 MSB First) ---
+    // 取 temp_3us 的低24位
+    data_frame[2] = (uint8_t)((temp_3us >> 16) & 0xFF);
+    data_frame[3] = (uint8_t)((temp_3us >> 8) & 0xFF);
+    data_frame[4] = (uint8_t)(temp_3us & 0xFF);
+
+    // 取 temp_300us 的低24位
+    data_frame[5] = (uint8_t)((temp_300us >> 16) & 0xFF);
+    data_frame[6] = (uint8_t)((temp_300us >> 8) & 0xFF);
+    data_frame[7] = (uint8_t)(temp_300us & 0xFF);
+
+    // --- 4. 计算校验位 ---
+    // 逻辑：(3us内部异或) ^ (300us内部异或) 等同于 所有6个字节直接异或
+    uint8_t checksum = 0;
+    for(int i = 2; i <= 7; i++) // 遍历 data_frame[2] 到 data_frame[7]
+    {
+        checksum ^= data_frame[i];
+    }
+    data_frame[8] = checksum;
+
+    // --- 5. 填充帧尾 ---
+    data_frame[9] = 0xCC;
+    data_frame[10] = 0xDD;
+
+    // --- 6. 发送数据 ---
+    // 直接使用带环形缓冲的发送函数
+    CDC_Transmit_FS2(data_frame, 11);
+
+    // --- 7. 周期延时 ---
+    HAL_Delay(10); // 10ms
+    
 
   }
   /* USER CODE END 3 */
@@ -339,19 +390,19 @@ void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
     if (TimerIdx == HRTIM_TIMERINDEX_TIMER_A)
     {
       adc_raw_3us  = AD4007_Read_Single2();
-      adc_voltage_3us = AD4007_ConvertToVoltage_SPI(adc_raw_3us);
-      num_3us++; // 这里对应 3us 事件
+      //adc_voltage_3us = AD4007_ConvertToVoltage_SPI(adc_raw_3us);
+      //num_3us++; // 这里对应 3us 事件
     }
 }
 
-// 处理 Compare Unit 4 事件 (对应配置的 43272 ticks, 即 300us)
+// 处理 Compare Unit 4 事件 (对应配置的 43272 ticks, 即 300.5us)
 void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
 {
     if (TimerIdx == HRTIM_TIMERINDEX_TIMER_A)
     {
         adc_raw_300us  = AD4007_Read_Single2();
-        adc_voltage_300us = AD4007_ConvertToVoltage_SPI(adc_raw_300us);
-        num_300us++;  // 这里对应 300us 事件
+        //adc_voltage_300us = AD4007_ConvertToVoltage_SPI(adc_raw_300us);
+        //num_300us++;  // 这里对应 300us 事件
     }
 }
 /* USER CODE END 4 */
