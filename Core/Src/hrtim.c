@@ -16,12 +16,21 @@
   *
   ******************************************************************************
   */
+#include <math.h>
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "hrtim.h"
+#include <complex.h>
+#include <stdint.h>
 
 /* USER CODE BEGIN 0 */
-
+//计算pCompareCfg.CompareValue的计数器标志
+float comp1_start=2;//3us
+float comp2_start=300;//3us
+//换算为主频下的计数器标志
+#define HRTIM_CLOCK_FREQ_F  144 // HRTIM 时钟频率 144 MHz,取us统一计算
+int16_t comp1_start_num;//3us对应的计数器数
+int16_t comp2_start_num;//300us对应的计数器数
 /* USER CODE END 0 */
 
 HRTIM_HandleTypeDef hhrtim1;
@@ -41,7 +50,8 @@ void MX_HRTIM1_Init(void)
   HRTIM_OutputCfgTypeDef pOutputCfg = {0};
 
   /* USER CODE BEGIN HRTIM1_Init 1 */
-
+  comp1_start_num = (int16_t)ceil(comp1_start * (double)HRTIM_CLOCK_FREQ_F); // 3us 对应的计数器数，向上取整
+  comp2_start_num = (int16_t)ceil(comp2_start * (double)HRTIM_CLOCK_FREQ_F); // 300us 对应的计数器数，向上取整
   /* USER CODE END HRTIM1_Init 1 */
   hhrtim1.Instance = HRTIM1;
   hhrtim1.Init.HRTIMInterruptResquests = HRTIM_IT_NONE;
@@ -113,12 +123,12 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  pCompareCfg.CompareValue = 432;
+  pCompareCfg.CompareValue = comp1_start_num;
   if (HAL_HRTIM_WaveformCompareConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_1, &pCompareCfg) != HAL_OK)
   {
     Error_Handler();
   }
-  pCompareCfg.CompareValue = 504;
+  pCompareCfg.CompareValue = comp1_start_num+72;
   pCompareCfg.AutoDelayedMode = HRTIM_AUTODELAYEDMODE_REGULAR;
   pCompareCfg.AutoDelayedTimeout = 0x0000;
 
@@ -126,12 +136,12 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  pCompareCfg.CompareValue = 43200;
+  pCompareCfg.CompareValue = comp2_start_num;
   if (HAL_HRTIM_WaveformCompareConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, &pCompareCfg) != HAL_OK)
   {
     Error_Handler();
   }
-  pCompareCfg.CompareValue = 43272;
+  pCompareCfg.CompareValue = comp2_start_num+72;
 
   if (HAL_HRTIM_WaveformCompareConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, &pCompareCfg) != HAL_OK)
   {
