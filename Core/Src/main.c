@@ -163,7 +163,7 @@ int main(void)
 
   //初始化TMUX GPIO
   TMUX_Global_Init();
-  HAL_Delay(5000);
+  HAL_Delay(100);
 
   char msg[64];
 
@@ -185,7 +185,7 @@ int main(void)
 
   sprintf(msg, "GPIO Start config\r\n");
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-  HAL_Delay(1000);
+  HAL_Delay(100);
 
   //2. AD4007 初始化
   if (AD4007_Init_Safe() == HAL_OK) {
@@ -193,7 +193,7 @@ int main(void)
   } else {
       strcpy(msg, "System Ready: AD4007 FAIL\r\n");
   }
-  HAL_Delay(1000); // 等待USB连接稳定
+  HAL_Delay(100); // 等待USB连接稳定
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
 
   // 3. 初始读取一次 ADC，验证功能
@@ -292,9 +292,9 @@ int main(void)
     CDC_Transmit_FS2(data_frame, 11);
 
     // --- 7. 周期延时 ---
-    HAL_Delay(1); // 10ms
+    HAL_Delay(10); // 10ms
     
-    if(num_3us == 100){
+    if(num_3us == 10){
       HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
     }
 
