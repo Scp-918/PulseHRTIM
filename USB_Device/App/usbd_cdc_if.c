@@ -97,6 +97,14 @@ uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
+/* Default line coding for virtual COM port: bitrate 961200, 1 stop bit, no parity, 8 data bits */
+USBD_CDC_LineCodingTypeDef linecoding =
+{
+  961200, /* baud rate */
+  0x00,   /* stop bits-1 */
+  0x00,   /* parity - none */
+  0x08    /* nb. of bits 8 */
+};
 
 /* USER CODE END PRIVATE_VARIABLES */
 
