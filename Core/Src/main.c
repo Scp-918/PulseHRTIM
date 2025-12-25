@@ -202,6 +202,8 @@ int main(void)
   sprintf(msg, "ADC:%.4f V\r\n", voltage);
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
 
+  HAL_Delay(10000);
+
   // 3.[修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -213,7 +215,8 @@ int main(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-  
+
+
   // 初始化 HRTIM1
   MX_HRTIM1_Init();
   
@@ -230,7 +233,7 @@ int main(void)
   }
 
   // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
-  HAL_HRTIM_WaveformOutputStart(&hhrtim1, HRTIM_OUTPUT_TA1 | HRTIM_OUTPUT_TA2);
+  HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA2);
 
     // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
   HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
@@ -246,46 +249,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    //格式化输出字符串
-    //显示当前的计数值，理论上每秒应该打印出 "CMP1: 1000, CMP2: 1000"
-    // sprintf(msg, "CMP1(3us): %ld, CMP2(300us): %ld\r\n", (long)num_3us, (long)num_300us);
-    
-    // //发送数据
-    // CDC_Transmit_Wait((uint8_t*)msg, strlen(msg));
-    // HAL_Delay(1000);
-    // //PA8设为高电平
-    // HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-    // HAL_Delay(1);
-    // int32_t code2 = AD4007_Read_Single();
-    // float voltage2 = AD4007_ConvertToVoltage(code2);
-    // sprintf(msg, "ADC:%.4f V\r\n", voltage2);
-    // HAL_Delay(4);
-    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    // HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-    // sprintf(msg, "CMP1(10us)\r\n");
-    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    // HAL_Delay(95);
-    //PA8设为高电平
-    // HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-    // HAL_Delay(1);
-    // uint32_t code2 = AD4007_Read_Single2();
-    // float voltage2 = AD4007_ConvertToVoltage_SPI(code2);
-    // sprintf(msg, "ADC:%.4f V\r\n", voltage2);
-    // HAL_Delay(4);
-    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    // HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-    // sprintf(msg, "CMP1(10us)\r\n");
-    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    // HAL_Delay(95);
-
-    // //分别输出 3us 和 300us 的 ADC 结果
-    // sprintf(msg, "ADC 3us:%.4f V, ADC 300us:%.4f V\r\n", adc_voltage_3us, adc_voltage_300us);
-    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    // //显示当前的计数值，理论上每秒应该打印出 "CMP1: 1000, CMP2: 1000"
-    // sprintf(msg, "CMP1(3us): %ld, CMP2(300us): %ld\r\n", (long)num_3us, (long)num_300us);
-    // // //发送数据
-    // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    // HAL_Delay(1000);
 
     // --- 1. 原子读取全局变量 ---
     // 这里的变量在 HRTIM 中断中更新，读取时需关中断防止数据撕裂
@@ -331,6 +294,9 @@ int main(void)
     // --- 7. 周期延时 ---
     HAL_Delay(10); // 10ms
     
+    if(num_3us == 1000){
+      HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
+    }
 
   }
   /* USER CODE END 3 */
@@ -391,7 +357,7 @@ void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
     {
       adc_raw_3us  = AD4007_Read_Single2();
       //adc_voltage_3us = AD4007_ConvertToVoltage_SPI(adc_raw_3us);
-      //num_3us++; // 这里对应 3us 事件
+      num_3us++; // 这里对应 3us 事件
     }
 }
 
