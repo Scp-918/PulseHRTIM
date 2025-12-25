@@ -292,7 +292,7 @@ int main(void)
     CDC_Transmit_FS2(data_frame, 11);
 
     // --- 7. 周期延时 ---
-    HAL_Delay(10); // 10ms
+    HAL_Delay(1); // 10ms
     
     if(num_3us == 10){
       HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);

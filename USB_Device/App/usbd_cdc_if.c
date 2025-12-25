@@ -100,7 +100,7 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 /* Default line coding for virtual COM port: bitrate 961200, 1 stop bit, no parity, 8 data bits */
 USBD_CDC_LineCodingTypeDef linecoding =
 {
-  961200, /* baud rate */
+  921600, /* baud rate */
   0x00,   /* stop bits-1 */
   0x00,   /* parity - none */
   0x08    /* nb. of bits 8 */
@@ -282,11 +282,23 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   /* 6      | bDataBits  |   1   | Number Data bits (5, 6, 7, 8 or 16).          */
   /*******************************************************************************/
     case CDC_SET_LINE_CODING:
+      linecoding.bitrate    = (uint32_t)(pbuf[0] | (pbuf[1] << 8) | \
+                                         (pbuf[2] << 16) | (pbuf[3] << 24));
+      linecoding.format     = pbuf[4];
+      linecoding.paritytype = pbuf[5];
+      linecoding.datatype   = pbuf[6];
 
+      /* If needed, apply new settings to UART hardware here */
     break;
 
     case CDC_GET_LINE_CODING:
-
+      pbuf[0] = (uint8_t)(linecoding.bitrate);
+      pbuf[1] = (uint8_t)(linecoding.bitrate >> 8);
+      pbuf[2] = (uint8_t)(linecoding.bitrate >> 16);
+      pbuf[3] = (uint8_t)(linecoding.bitrate >> 24);
+      pbuf[4] = linecoding.format;
+      pbuf[5] = linecoding.paritytype;
+      pbuf[6] = linecoding.datatype;
     break;
 
     case CDC_SET_CONTROL_LINE_STATE:
