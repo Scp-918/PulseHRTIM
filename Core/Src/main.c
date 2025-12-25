@@ -202,7 +202,7 @@ int main(void)
   sprintf(msg, "ADC:%.4f V\r\n", voltage);
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
 
-  HAL_Delay(10000);
+  HAL_Delay(100);
 
   // 3.[修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -294,7 +294,7 @@ int main(void)
     // --- 7. 周期延时 ---
     HAL_Delay(10); // 10ms
     
-    if(num_3us == 1000){
+    if(num_3us == 100){
       HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
     }
 
