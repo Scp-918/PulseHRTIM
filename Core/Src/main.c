@@ -234,6 +234,7 @@ int main(void)
 
   // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
   HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA2);
+  HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
 
     // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
   HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
@@ -294,9 +295,9 @@ int main(void)
     // --- 7. 周期延时 ---
     HAL_Delay(1); // 10ms
     
-    if(num_3us == 10){
-      HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
-    }
+    // if(num_3us == 10){
+    //   HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
+    // }
 
   }
   /* USER CODE END 3 */
