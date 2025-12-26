@@ -67,7 +67,7 @@ volatile uint8_t measure_done = 0;
 volatile uint8_t data_ready_flag = 0; // 采样完成标志位
 
 #define PACKET_SIZE 11        // 单个采样点的字节数
-#define BATCH_COUNT 10       // 每积攒10个采样点发送一次 (可根据实时性需求调整)
+#define BATCH_COUNT 5       // 每积攒10个采样点发送一次 (可根据实时性需求调整)
 #define TX_BUF_SIZE (PACKET_SIZE * BATCH_COUNT)
 
 uint8_t usb_tx_cache[TX_BUF_SIZE]; // USB 发送缓存
