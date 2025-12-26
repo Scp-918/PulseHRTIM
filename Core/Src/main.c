@@ -63,7 +63,20 @@ volatile uint8_t measure_done = 0;
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+/* USER CODE BEGIN PV */
+volatile uint8_t data_ready_flag = 0; // 采样完成标志位
 
+#define PACKET_SIZE 11        // 单个采样点的字节数
+#define BATCH_COUNT 10       // 每积攒10个采样点发送一次 (可根据实时性需求调整)
+#define TX_BUF_SIZE (PACKET_SIZE * BATCH_COUNT)
+
+uint8_t usb_tx_cache[TX_BUF_SIZE]; // USB 发送缓存
+uint8_t sample_counter = 0;        // 缓存计数器
+
+// 用于暂存采集到的数据
+volatile int32_t current_adc_3us = 0;
+volatile int32_t current_adc_300us = 0;
+/* USER CODE END PV */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -245,62 +258,119 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  // while (1)
+  // {
+  //   /* USER CODE END WHILE */
+
+  //   /* USER CODE BEGIN 3 */
+
+  //   // --- 1. 原子读取全局变量 ---
+  //   // 这里的变量在 HRTIM 中断中更新，读取时需关中断防止数据撕裂
+  //   uint32_t temp_3us, temp_300us;
+    
+  //   __disable_irq(); // 进入临界区
+  //   temp_3us = adc_raw_3us;
+  //   temp_300us = adc_raw_300us;
+  //   __enable_irq();  // 退出临界区
+
+  //   // --- 2. 填充帧头 ---
+  //   data_frame[0] = 0xAA;
+  //   data_frame[1] = 0xBB;
+
+  //   // --- 3. 填充数据 (各3字节, 大端模式 MSB First) ---
+  //   // 取 temp_3us 的低24位
+  //   data_frame[2] = (uint8_t)((temp_3us >> 16) & 0xFF);
+  //   data_frame[3] = (uint8_t)((temp_3us >> 8) & 0xFF);
+  //   data_frame[4] = (uint8_t)(temp_3us & 0xFF);
+
+  //   // 取 temp_300us 的低24位
+  //   data_frame[5] = (uint8_t)((temp_300us >> 16) & 0xFF);
+  //   data_frame[6] = (uint8_t)((temp_300us >> 8) & 0xFF);
+  //   data_frame[7] = (uint8_t)(temp_300us & 0xFF);
+
+  //   // --- 4. 计算校验位 ---
+  //   // 逻辑：(3us内部异或) ^ (300us内部异或) 等同于 所有6个字节直接异或
+  //   uint8_t checksum = 0;
+  //   for(int i = 2; i <= 7; i++) // 遍历 data_frame[2] 到 data_frame[7]
+  //   {
+  //       checksum ^= data_frame[i];
+  //   }
+  //   data_frame[8] = checksum;
+
+  //   // --- 5. 填充帧尾 ---
+  //   data_frame[9] = 0xCC;
+  //   data_frame[10] = 0xDD;
+
+  //   // --- 6. 发送数据 ---
+  //   // 直接使用带环形缓冲的发送函数
+  //   CDC_Transmit_FS2(data_frame, 11);
+
+  //   // --- 7. 周期延时 ---
+  //   HAL_Delay(1); // 10ms
+    
+  //   // if(num_3us == 10){
+  //   //   HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
+  //   // }
+
+  // }
   while (1)
   {
-    /* USER CODE END WHILE */
+      if (data_ready_flag)
+      {
+          data_ready_flag = 0; // 清除标志
 
-    /* USER CODE BEGIN 3 */
+          // --- 开始打包数据到缓存 ---
+          uint8_t *p = &usb_tx_cache[sample_counter * PACKET_SIZE];
+          
+          // // 填充单点数据 (11字节)
+          // p[0] = 0xAA; 
+          // p[1] = (uint8_t)((current_adc_3us >> 24) & 0xFF);
+          // p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
+          // p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
+          // p[4] = (uint8_t)(current_adc_3us & 0xFF);
+          // p[5] = (uint8_t)((current_adc_300us >> 24) & 0xFF);
+          // p[6] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
+          // p[7] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
+          // p[8] = (uint8_t)(current_adc_300us & 0xFF);
+          // p[9] = 0x0D;
+          // p[10] = 0x0A;
+          // --- 2. 填充帧头 ---
+          p[0] = 0xAA; 
+          p[1] =  0xBB;
+          p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
+          p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
+          p[4] = (uint8_t)(current_adc_3us & 0xFF);
+          p[5] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
+          p[6] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
+          p[7] = (uint8_t)(current_adc_300us & 0xFF);
+          uint8_t checksum = 0;
+          for(int i = 2; i <= 7; i++) // 遍历 p[2] 到 p[7]
+          {
+              checksum ^= p[i];
+          }
+          p[8] = checksum;
+          p[9] = 0xCC;
+          p[10] = 0xDD;
 
-    // --- 1. 原子读取全局变量 ---
-    // 这里的变量在 HRTIM 中断中更新，读取时需关中断防止数据撕裂
-    uint32_t temp_3us, temp_300us;
-    
-    __disable_irq(); // 进入临界区
-    temp_3us = adc_raw_3us;
-    temp_300us = adc_raw_300us;
-    __enable_irq();  // 退出临界区
+          sample_counter++;
 
-    // --- 2. 填充帧头 ---
-    data_frame[0] = 0xAA;
-    data_frame[1] = 0xBB;
-
-    // --- 3. 填充数据 (各3字节, 大端模式 MSB First) ---
-    // 取 temp_3us 的低24位
-    data_frame[2] = (uint8_t)((temp_3us >> 16) & 0xFF);
-    data_frame[3] = (uint8_t)((temp_3us >> 8) & 0xFF);
-    data_frame[4] = (uint8_t)(temp_3us & 0xFF);
-
-    // 取 temp_300us 的低24位
-    data_frame[5] = (uint8_t)((temp_300us >> 16) & 0xFF);
-    data_frame[6] = (uint8_t)((temp_300us >> 8) & 0xFF);
-    data_frame[7] = (uint8_t)(temp_300us & 0xFF);
-
-    // --- 4. 计算校验位 ---
-    // 逻辑：(3us内部异或) ^ (300us内部异或) 等同于 所有6个字节直接异或
-    uint8_t checksum = 0;
-    for(int i = 2; i <= 7; i++) // 遍历 data_frame[2] 到 data_frame[7]
-    {
-        checksum ^= data_frame[i];
-    }
-    data_frame[8] = checksum;
-
-    // --- 5. 填充帧尾 ---
-    data_frame[9] = 0xCC;
-    data_frame[10] = 0xDD;
-
-    // --- 6. 发送数据 ---
-    // 直接使用带环形缓冲的发送函数
-    CDC_Transmit_FS2(data_frame, 11);
-
-    // --- 7. 周期延时 ---
-    HAL_Delay(1); // 10ms
-    
-    // if(num_3us == 10){
-    //   HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
-    // }
-
+          // --- 当达到指定的批次数量时，通过 USB 发送一次 ---
+          if (sample_counter >= BATCH_COUNT)
+          {
+              // 检查 CDC 发送状态，如果忙则循环等待或做丢包处理
+              // 使用你的非阻塞发送函数 CDC_Transmit_FS2
+              uint8_t result = CDC_Transmit_FS2(usb_tx_cache, TX_BUF_SIZE);
+              
+              if (result == USBD_OK) {
+                  sample_counter = 0; // 发送成功才清空计数器
+              } else {
+                  // 如果 USB 忙，建议这里直接放弃这一包或者覆盖，防止主循环卡死
+                  sample_counter = 0; 
+              }
+          }
+      }
+    /* USER CODE END 3 */
   }
-  /* USER CODE END 3 */
 }
 
 /**
@@ -358,7 +428,7 @@ void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
     {
       adc_raw_3us  = AD4007_Read_Single2();
       //adc_voltage_3us = AD4007_ConvertToVoltage_SPI(adc_raw_3us);
-      num_3us++; // 这里对应 3us 事件
+      // num_3us++; // 这里对应 3us 事件
     }
 }
 
@@ -370,6 +440,12 @@ void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
         adc_raw_300us  = AD4007_Read_Single2();
         //adc_voltage_300us = AD4007_ConvertToVoltage_SPI(adc_raw_300us);
         //num_300us++;  // 这里对应 300us 事件
+        // 2. 暂存当前一轮的所有数据（保证主循环拿到的数据是同一时刻的）
+        current_adc_3us = adc_raw_3us;
+        current_adc_300us = adc_raw_300us;
+
+        // 3. 通知主循环有新数据
+        data_ready_flag = 1;
     }
 }
 /* USER CODE END 4 */

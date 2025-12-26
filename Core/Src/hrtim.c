@@ -25,7 +25,7 @@
 
 /* USER CODE BEGIN 0 */
 //计算pCompareCfg.CompareValue的计数器标志
-float comp1_start=1;//3us
+float comp1_start=2;//3us
 float comp2_start=100;//3us
 //换算为主频下的计数器标志
 #define HRTIM_CLOCK_FREQ_F  144 // HRTIM 时钟频率 144 MHz,取us统一计算
