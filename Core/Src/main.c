@@ -100,7 +100,7 @@ uint8_t CDC_Transmit_Wait(uint8_t* Buf, uint16_t Len); // [新增] 阻塞式发�
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define US_DELAY_COUNT 2400
+#define US_DELAY_COUNT 1666
 static void Delay_us_50(void)
 {
     // 使用 volatile 和 __NOP() 确保编译器不会优化掉循环，以实现准确的忙等。

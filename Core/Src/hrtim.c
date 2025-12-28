@@ -25,10 +25,10 @@
 
 /* USER CODE BEGIN 0 */
 //计算pCompareCfg.CompareValue的计数器标志
-float comp1_start=3;//3us
-float comp2_start=100;//100us
+float comp1_start=1;//3us
+float comp2_start=300;//100us
 //换算为主频下的计数器标志
-#define HRTIM_CLOCK_FREQ_F  100 // HRTIM 时钟频率 144 MHz,取us统一计算
+#define HRTIM_CLOCK_FREQ_F  100 // HRTIM 时钟频率 100 MHz,取us统一计算
 int16_t comp1_start_num;//第一次采样对应的计数器数
 int16_t comp2_start_num;//第二次采样对应的计数器数
 /* USER CODE END 0 */
@@ -50,8 +50,8 @@ void MX_HRTIM1_Init(void)
   HRTIM_OutputCfgTypeDef pOutputCfg = {0};
 
   /* USER CODE BEGIN HRTIM1_Init 1 */
-  comp1_start_num = (int16_t)ceil(comp1_start * (double)HRTIM_CLOCK_FREQ_F/4); // 3us 对应的计数器数，向上取整
-  comp2_start_num = (int16_t)ceil(comp2_start * (double)HRTIM_CLOCK_FREQ_F/4); // 300us 对应的计数器数，向上取整
+  comp1_start_num = (int16_t)ceil(comp1_start * (double)HRTIM_CLOCK_FREQ_F/2); // 3us 对应的计数器数，向上取整
+  comp2_start_num = (int16_t)ceil(comp2_start * (double)HRTIM_CLOCK_FREQ_F/2); // 300us 对应的计数器数，向上取整
   /* USER CODE END HRTIM1_Init 1 */
   hhrtim1.Instance = HRTIM1;
   hhrtim1.Init.HRTIMInterruptResquests = HRTIM_IT_NONE;
@@ -92,7 +92,7 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  pTimeBaseCfg.Period = 5100;
+  pTimeBaseCfg.Period = 15100;
   pTimeBaseCfg.RepetitionCounter = 0x00;
   pTimeBaseCfg.PrescalerRatio = HRTIM_PRESCALERRATIO_DIV2;
   pTimeBaseCfg.Mode = HRTIM_MODE_SINGLESHOT_RETRIGGERABLE;
