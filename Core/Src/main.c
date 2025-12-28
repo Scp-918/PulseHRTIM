@@ -46,9 +46,9 @@ volatile uint8_t measure_done = 0;
 //定义HRTIM控制参数
 extern HRTIM_HandleTypeDef hhrtim1;
 // 长周期参数
-#define LONG_CMP3_VAL   36000
-#define LONG_CMP4_VAL   36072  // CMP3 + 72
-#define LONG_PER_VAL    36200
+#define LONG_CMP3_VAL   57600
+#define LONG_CMP4_VAL   57672  // CMP3 + 72
+#define LONG_PER_VAL    57800
 
 // 短周期参数
 #define SHORT_CMP3_VAL  7200
@@ -90,7 +90,6 @@ uint8_t sample_counter = 0;        // 缓存计数器
 // 用于暂存采集到的数据
 volatile int32_t current_adc_3us = 0;
 volatile int32_t current_adc_300us = 0;
-/* USER CODE END PV */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -274,9 +273,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   // while (1)
   // {
-  //   /* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-  //   /* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 
   //   // --- 1. 原子读取全局变量 ---
   //   // 这里的变量在 HRTIM 中断中更新，读取时需关中断防止数据撕裂
@@ -383,7 +382,7 @@ int main(void)
               }
           }
       }
-    /* USER CODE END 3 */
+  /* USER CODE END 3 */
   }
 }
 
@@ -403,13 +402,12 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
-  RCC_OscInitStruct.PLL.PLLN = 18;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+  RCC_OscInitStruct.PLL.PLLN = 24;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV6;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
