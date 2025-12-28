@@ -50,8 +50,8 @@ void MX_HRTIM1_Init(void)
   HRTIM_OutputCfgTypeDef pOutputCfg = {0};
 
   /* USER CODE BEGIN HRTIM1_Init 1 */
-  comp1_start_num = (int16_t)ceil(comp1_start * (double)HRTIM_CLOCK_FREQ_F); // 3us 对应的计数器数，向上取整
-  comp2_start_num = (int16_t)ceil(comp2_start * (double)HRTIM_CLOCK_FREQ_F); // 300us 对应的计数器数，向上取整
+  comp1_start_num = (int16_t)ceil(comp1_start * (double)HRTIM_CLOCK_FREQ_F/2); // 3us 对应的计数器数，向上取整
+  comp2_start_num = (int16_t)ceil(comp2_start * (double)HRTIM_CLOCK_FREQ_F/2); // 300us 对应的计数器数，向上取整
   /* USER CODE END HRTIM1_Init 1 */
   hhrtim1.Instance = HRTIM1;
   hhrtim1.Init.HRTIMInterruptResquests = HRTIM_IT_NONE;
