@@ -402,14 +402,15 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
-  RCC_OscInitStruct.PLL.PLLN = 24;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV3;
+  RCC_OscInitStruct.PLL.PLLN = 25;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV6;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -425,7 +426,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -463,38 +464,38 @@ void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
         /* 这里的逻辑是：当前正在执行长/短脉冲，我们要在它结束前，
         把"下一个"周期所需的参数写入影子寄存器 */
 
-        if (pulse_state_toggle == 0)
-        {
-          /* 当前状态：0 (比如短脉冲结束前) -> 准备切换为【长脉冲】 */
+        // if (pulse_state_toggle == 0)
+        // {
+        //   /* 当前状态：0 (比如短脉冲结束前) -> 准备切换为【长脉冲】 */
           
-          // 1. 设置 Compare 3
-          __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, LONG_CMP3_VAL);
+        //   // 1. 设置 Compare 3
+        //   __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, LONG_CMP3_VAL);
           
-          // 2. 设置 Compare 4
-          __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, LONG_CMP4_VAL);
+        //   // 2. 设置 Compare 4
+        //   __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, LONG_CMP4_VAL);
           
-          // 3. 设置 Period (Timer A 计数周期)
-          __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, LONG_PER_VAL);
+        //   // 3. 设置 Period (Timer A 计数周期)
+        //   __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, LONG_PER_VAL);
 
-          // 更新状态，下次进入进入else分支
-          pulse_state_toggle = 1;
-        }
-        else
-        {
-          /* 当前状态：1 (比如长脉冲结束前) -> 准备切换为【短脉冲】 */
+        //   // 更新状态，下次进入进入else分支
+        //   pulse_state_toggle = 1;
+        // }
+        // else
+        // {
+        //   /* 当前状态：1 (比如长脉冲结束前) -> 准备切换为【短脉冲】 */
           
-          // 1. 设置 Compare 3
-          __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, SHORT_CMP3_VAL);
+        //   // 1. 设置 Compare 3
+        //   __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, SHORT_CMP3_VAL);
           
-          // 2. 设置 Compare 4
-          __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, SHORT_CMP4_VAL);
+        //   // 2. 设置 Compare 4
+        //   __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, SHORT_CMP4_VAL);
           
-          // 3. 设置 Period
-          __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, SHORT_PER_VAL);
+        //   // 3. 设置 Period
+        //   __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, SHORT_PER_VAL);
 
-          // 更新状态
-          pulse_state_toggle = 0;
-        }
+        //   // 更新状态
+        //   pulse_state_toggle = 0;
+        // }
       
 
       // 4. 通知主循环有新数据
