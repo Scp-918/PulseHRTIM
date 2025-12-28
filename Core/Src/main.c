@@ -420,7 +420,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-// 处理 Compare Unit 2 事件 (对应配置的 504 ticks, 即 3.5us)
+// 处理 Compare Unit 2 事件 (对应第一次触发)
 void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
 {
     // 判断是否是 Timer A 产生的中断
@@ -432,7 +432,7 @@ void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
     }
 }
 
-// 处理 Compare Unit 4 事件 (对应配置的 43272 ticks, 即 300.5us)
+// 处理 Compare Unit 4 事件 (对应第二次触发)
 void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
 {
     if (TimerIdx == HRTIM_TIMERINDEX_TIMER_A)
