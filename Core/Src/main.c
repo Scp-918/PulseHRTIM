@@ -46,14 +46,14 @@ volatile uint8_t measure_done = 0;
 //定义HRTIM控制参数
 extern HRTIM_HandleTypeDef hhrtim1;
 // 长周期参数
-#define LONG_CMP3_VAL   57600
-#define LONG_CMP4_VAL   57672  // CMP3 + 72
-#define LONG_PER_VAL    57800
+#define LONG_CMP3_VAL   12500
+#define LONG_CMP4_VAL   12513  // CMP3 + 13
+#define LONG_PER_VAL    12600
 
 // 短周期参数
-#define SHORT_CMP3_VAL  7200
-#define SHORT_CMP4_VAL  7272   // CMP3 + 72
-#define SHORT_PER_VAL   7400
+#define SHORT_CMP3_VAL  50000
+#define SHORT_CMP4_VAL  50013   // CMP3 + 13
+#define SHORT_PER_VAL   50100
 /* 状态变量: 0 = 当前是短脉冲(准备切换到长), 1 = 当前是长脉冲(准备切换到短) */
 /* 初始值设为0，假设第一次启动默认配置的是短脉冲，或者在Init里初始化为其中一种 */
 volatile uint8_t pulse_state_toggle = 0;
@@ -464,38 +464,38 @@ void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
         /* 这里的逻辑是：当前正在执行长/短脉冲，我们要在它结束前，
         把"下一个"周期所需的参数写入影子寄存器 */
 
-        // if (pulse_state_toggle == 0)
-        // {
-        //   /* 当前状态：0 (比如短脉冲结束前) -> 准备切换为【长脉冲】 */
+        if (pulse_state_toggle == 0)
+        {
+          /* 当前状态：0 (比如短脉冲结束前) -> 准备切换为【长脉冲】 */
           
-        //   // 1. 设置 Compare 3
-        //   __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, LONG_CMP3_VAL);
+          // 1. 设置 Compare 3
+          __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, LONG_CMP3_VAL);
           
-        //   // 2. 设置 Compare 4
-        //   __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, LONG_CMP4_VAL);
+          // 2. 设置 Compare 4
+          __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, LONG_CMP4_VAL);
           
-        //   // 3. 设置 Period (Timer A 计数周期)
-        //   __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, LONG_PER_VAL);
+          // 3. 设置 Period (Timer A 计数周期)
+          __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, LONG_PER_VAL);
 
-        //   // 更新状态，下次进入进入else分支
-        //   pulse_state_toggle = 1;
-        // }
-        // else
-        // {
-        //   /* 当前状态：1 (比如长脉冲结束前) -> 准备切换为【短脉冲】 */
+          // 更新状态，下次进入进入else分支
+          pulse_state_toggle = 1;
+        }
+        else
+        {
+          /* 当前状态：1 (比如长脉冲结束前) -> 准备切换为【短脉冲】 */
           
-        //   // 1. 设置 Compare 3
-        //   __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, SHORT_CMP3_VAL);
+          // 1. 设置 Compare 3
+          __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, SHORT_CMP3_VAL);
           
-        //   // 2. 设置 Compare 4
-        //   __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, SHORT_CMP4_VAL);
+          // 2. 设置 Compare 4
+          __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, SHORT_CMP4_VAL);
           
-        //   // 3. 设置 Period
-        //   __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, SHORT_PER_VAL);
+          // 3. 设置 Period
+          __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, SHORT_PER_VAL);
 
-        //   // 更新状态
-        //   pulse_state_toggle = 0;
-        // }
+          // 更新状态
+          pulse_state_toggle = 0;
+        }
       
 
       // 4. 通知主循环有新数据
