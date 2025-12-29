@@ -46,14 +46,14 @@ volatile uint8_t measure_done = 0;
 //定义HRTIM控制参数
 extern HRTIM_HandleTypeDef hhrtim1;
 // 长周期参数
-#define LONG_CMP3_VAL   12500
-#define LONG_CMP4_VAL   12513  // CMP3 + 13
-#define LONG_PER_VAL    12600
+#define LONG_CMP3_VAL   65000
+#define LONG_CMP4_VAL   65013  // CMP3 + 13
+#define LONG_PER_VAL    65100
 
 // 短周期参数
-#define SHORT_CMP3_VAL  50000
-#define SHORT_CMP4_VAL  50013   // CMP3 + 13
-#define SHORT_PER_VAL   50100
+#define SHORT_CMP3_VAL  20000
+#define SHORT_CMP4_VAL  20013   // CMP3 + 13
+#define SHORT_PER_VAL   20100
 /* 状态变量: 0 = 当前是短脉冲(准备切换到长), 1 = 当前是长脉冲(准备切换到短) */
 /* 初始值设为0，假设第一次启动默认配置的是短脉冲，或者在Init里初始化为其中一种 */
 volatile uint8_t pulse_state_toggle = 0;
@@ -465,7 +465,7 @@ void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
         把"下一个"周期所需的参数写入影子寄存器 */
         if(pulse_state_toggle==0)
         {
-          if (num_300us >= 600)
+          if (num_300us >= 1500)
           {
             /* 当前状态：0 (比如短脉冲结束前) -> 准备切换为【长脉冲】 */
             
@@ -488,7 +488,7 @@ void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
         }
         if(pulse_state_toggle==1)
         {
-          if (num_300us >= 300)
+          if (num_300us >= 750)
           {
             /* 当前状态：1 (比如长脉冲结束前) -> 准备切换为【短脉冲】 */
             
