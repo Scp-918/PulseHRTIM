@@ -465,7 +465,7 @@ void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
         把"下一个"周期所需的参数写入影子寄存器 */
         if(pulse_state_toggle==0)
         {
-          if (num_300us >= 1500)
+          if (num_300us >= 100)
           {
             /* 当前状态：0 (比如短脉冲结束前) -> 准备切换为【长脉冲】 */
             
@@ -479,33 +479,11 @@ void HAL_HRTIM_Compare4EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t Timer
             __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, LONG_PER_VAL);
 
             // 4. 设置master timer的RepetitionCounter
-            hhrtim->Instance->sMasterRegs.MREP = 19;
+            hhrtim->Instance->sMasterRegs.MREP = 9;
 
             // 更新状态，下次进入长周期判断
             pulse_state_toggle = 1;
-            num_300us = 0; // 重置计数器
-          }
-        }
-        if(pulse_state_toggle==1)
-        {
-          if (num_300us >= 750)
-          {
-            /* 当前状态：1 (比如长脉冲结束前) -> 准备切换为【短脉冲】 */
-            
-            // 1. 设置 Compare 3
-            __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_3, SHORT_CMP3_VAL);
-            
-            // 2. 设置 Compare 4
-            __HAL_HRTIM_SETCOMPARE(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, SHORT_CMP4_VAL);
-            
-            // 3. 设置 Period
-            __HAL_HRTIM_SETPERIOD(hhrtim, HRTIM_TIMERINDEX_TIMER_A, SHORT_PER_VAL);
-
-            hhrtim->Instance->sMasterRegs.MREP = 9;
-
-            // 更新状态
-            pulse_state_toggle = 0;
-            num_300us = 0; // 重置计数器
+            // num_300us = 0; // 重置计数器
           }
         }
 
