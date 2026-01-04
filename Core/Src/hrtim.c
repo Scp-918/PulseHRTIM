@@ -26,7 +26,7 @@
 /* USER CODE BEGIN 0 */
 //计算pCompareCfg.CompareValue的计数器标志
 float comp1_start=2;//3us
-float comp2_start=100;//3us
+float comp2_start=498;//3us
 //换算为主频下的计数器标志
 #define HRTIM_CLOCK_FREQ_F  144 // HRTIM 时钟频率 144 MHz,取us统一计算
 int16_t comp1_start_num;//3us对应的计数器数
@@ -92,9 +92,9 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  pTimeBaseCfg.Period = 14600;
+  pTimeBaseCfg.Period = 36000;
   pTimeBaseCfg.RepetitionCounter = 0x00;
-  pTimeBaseCfg.PrescalerRatio = HRTIM_PRESCALERRATIO_DIV1;
+  pTimeBaseCfg.PrescalerRatio = HRTIM_PRESCALERRATIO_DIV2;
   pTimeBaseCfg.Mode = HRTIM_MODE_SINGLESHOT_RETRIGGERABLE;
   if (HAL_HRTIM_TimeBaseConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, &pTimeBaseCfg) != HAL_OK)
   {
