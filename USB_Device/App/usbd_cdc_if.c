@@ -143,6 +143,8 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
 uint8_t CDC_Transmit_FS2(uint8_t* Buf, uint16_t Len)
 {
+  // 1. 进入临界区：关闭中断
+  // __disable_irq();
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 7 */
   USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
@@ -189,7 +191,8 @@ uint8_t CDC_Transmit_FS2(uint8_t* Buf, uint16_t Len)
       UserTxBufBusy = 1;
       result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
   }
-
+  // 2. 退出临界区：恢复中断
+  // __enable_irq();
   /* USER CODE END 7 */
   return result;
 }
@@ -344,11 +347,8 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   // 利用您已经实现的 CDC_Transmit_FS2 函数（环形缓冲区版本）发送数据
   // Buf 包含了接收到的数据，*Len 是接收到的数据长度
   CDC_Transmit_FS2(Buf, *Len);
-  HAL_Delay(50);
-  if (Len != NULL && *Len > 0)
-  {
-      HAL_UART_Transmit(&huart1, Buf, *Len, 100);
-  }
+  HAL_Delay(200);
+  HAL_UART_Transmit(&huart1, Buf, *Len, 100);
 
   // 2. 【原有代码】准备下一次接收
   // 这一步非常重要，必须告知 USB 驱动重新准备好接收缓冲区，否则将无法接收后续数据

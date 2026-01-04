@@ -173,7 +173,7 @@ int main(void)
   // MX_I2C3_Init();
   // MX_SPI1_Init();
   MX_SPI3_Init();
-  MX_USART1_UART_Init();
+  // MX_USART1_UART_Init();
   MX_USB_Device_Init();
 
   //初始化TMUX GPIO
