@@ -182,20 +182,20 @@ int main(void)
   MX_USB_Device_Init();
 
   //初始化TMUX GPIO
-  // BLE_System_Init();
+  BLE_System_Init();
 
   TMUX_Global_Init();
   HAL_Delay(100);
 
   char msg[64];
   //从这里开始先注释
-  // 1. 电源上电序列
-  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);  // E5V
-  // HAL_Delay(50);
-  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);  // E3.3V
-  // HAL_Delay(50);
-  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET); // E4V
-  // HAL_Delay(50); // 等待电源稳定
+  //1. 电源上电序列
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);  // E5V
+  HAL_Delay(50);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);  // E3.3V
+  HAL_Delay(50);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET); // E4V
+  HAL_Delay(50); // 等待电源稳定
 
   // // [静态配置]
   // // KH: 常态连接 S3 (Channel 3: A2=0, A1=1, A0=0)
@@ -342,8 +342,8 @@ int main(void)
   HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 10);
 
 
-  HAL_Delay(10);                                        // 延时等待模块唤醒
-  HAL_UART_Transmit(&huart1, (uint8_t*)"<RD_BAUD>", 9, 100);
+  HAL_Delay(100);                                        // 延时等待模块唤醒
+  // HAL_UART_Transmit(&huart1, (uint8_t*)"<RD_BAUD>", 9, 100);
   while (1)
   {
     /* USER CODE END WHILE */
