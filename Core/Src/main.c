@@ -73,6 +73,7 @@ volatile uint8_t data_ready_flag = 0; // 采样完成标志位
 
 uint8_t usb_tx_cache[TX_BUF_SIZE]; // USB 发送缓存
 uint8_t sample_counter = 0;        // 缓存计数器
+uint8_t rx1_byte;;               // USART1接收单字节变量
 
 // 用于暂存采集到的数据
 volatile int32_t current_adc_3us = 0;
@@ -199,10 +200,15 @@ int main(void)
   // // KB: 初始状态设为断开
   // TMUX_KB_SetChannel(TMUX_CH_S7);
 
-  // sprintf(msg, "GPIO Start config\r\n");
-  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-  // HAL_Delay(100);
+  sprintf(msg, "GPIO Start config\r\n");
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  HAL_Delay(100);
 
+  // 【关键】启动USART1的中断接收，每次接收1个字节
+  HAL_UART_Receive_IT(&huart1, &rx1_byte, 1);
+  sprintf(msg, "UASRT1 Start config\r\n");
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  HAL_Delay(100);
   // //2. AD4007 初始化
   // if (AD4007_Init_Safe() == HAL_OK) {
   //     strcpy(msg, "System Ready: AD4007 OK\r\n");
@@ -444,6 +450,20 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  // 判断是否是 USART1 (连接HJ131的串口)
+  if (huart->Instance == USART1)
+  {
+    // 【修改说明】: 收到蓝牙数据后，通过USB虚拟串口发回上位机
+    // 这里调用您已经实现的环形缓冲发送函数 CDC_Transmit_FS2
+    CDC_Transmit_FS2(&rx1_byte, 1);
+
+    // 【关键】再次开启中断接收，等待下一个字节
+    HAL_UART_Receive_IT(&huart1, &rx1_byte, 1);
+  }
+}
+
 // 处理 Compare Unit 2 事件 (对应配置的 504 ticks, 即 3.5us)
 void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef *hhrtim, uint32_t TimerIdx)
 {
