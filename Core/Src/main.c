@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include "TMUX1108.h"
 #include "AD4007.h" 
+#include "ble.h"  // 引入BLE头文件
 
 /* 全局变量用于存储 中断次数 */
 volatile int32_t num_3us = 0;
@@ -175,6 +176,8 @@ int main(void)
   MX_USB_Device_Init();
 
   //初始化TMUX GPIO
+  BLE_System_Init();
+
   TMUX_Global_Init();
   HAL_Delay(100);
 
@@ -375,9 +378,21 @@ int main(void)
       //         }
       //     }
       // }
-    sprintf(msg, "while\r\n");
-    CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-    HAL_Delay(1000); 
+    /* 1. 通过 USB 确认主循环运行 (有线) */
+      char *process_msg = "while process\r\n";
+      CDC_Transmit_FS2((uint8_t*)process_msg, strlen(process_msg));
+
+      /* 2. 初始化 HJ131 并通过 USB 报告质量 (有线诊断) */
+      BLE_Run_Test_Cycle();
+
+      /* 3. 通过 BLE 发送数据 (无线验证) */
+      // 延时一小段时间，让之前的配置指令处理完成，确保缓冲区干净
+      HAL_Delay(50); 
+      // 发送 "ble process" 加换行符，方便上位机查看
+      BLE_Send_Data("ble process\r\n");
+
+      /* 4. 延时1秒进入下一次循环 */
+      HAL_Delay(3000);
     /* USER CODE END 3 */
   }
 }

@@ -47,6 +47,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/TMUX1108.c
     Core/Src/AD4007.c
+    Core/Src/ble.c
 )
 
 # Add include paths
