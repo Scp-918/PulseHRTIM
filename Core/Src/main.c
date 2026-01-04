@@ -382,17 +382,17 @@ int main(void)
       char *process_msg = "while process\r\n";
       CDC_Transmit_FS2((uint8_t*)process_msg, strlen(process_msg));
 
-      /* 2. 初始化 HJ131 并通过 USB 报告质量 (有线诊断) */
-      BLE_Run_Test_Cycle();
+      // /* 2. 初始化 HJ131 并通过 USB 报告质量 (有线诊断) */
+      // BLE_Run_Test_Cycle();
 
-      /* 3. 通过 BLE 发送数据 (无线验证) */
-      // 延时一小段时间，让之前的配置指令处理完成，确保缓冲区干净
-      HAL_Delay(50); 
-      // 发送 "ble process" 加换行符，方便上位机查看
-      BLE_Send_Data("ble process\r\n");
+      // /* 3. 通过 BLE 发送数据 (无线验证) */
+      // // 延时一小段时间，让之前的配置指令处理完成，确保缓冲区干净
+      // HAL_Delay(50); 
+      // // 发送 "ble process" 加换行符，方便上位机查看
+      // BLE_Send_Data("ble process\r\n");
 
       /* 4. 延时1秒进入下一次循环 */
-      HAL_Delay(3000);
+      HAL_Delay(1000);
     /* USER CODE END 3 */
   }
 }
