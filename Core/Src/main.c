@@ -179,81 +179,82 @@ int main(void)
   HAL_Delay(100);
 
   char msg[64];
+  //从这里开始先注释
+  // // 1. 电源上电序列
+  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);  // E5V
+  // HAL_Delay(50);
+  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);  // E3.3V
+  // HAL_Delay(50);
+  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET); // E4V
+  // HAL_Delay(50); // 等待电源稳定
 
-  // 1. 电源上电序列
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);  // E5V
-  HAL_Delay(50);
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);  // E3.3V
-  HAL_Delay(50);
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET); // E4V
-  HAL_Delay(50); // 等待电源稳定
+  // // [静态配置]
+  // // KH: 常态连接 S3 (Channel 3: A2=0, A1=1, A0=0)
+  // TMUX_KH_SetChannel(TMUX_CH_S2);
+  // // KL: 常态连接 S2 (Channel 2: A2=0, A1=0, A0=1)
+  // TMUX_KL_SetChannel(TMUX_CH_S3);
+  // // KB: 初始状态设为断开
+  // TMUX_KB_SetChannel(TMUX_CH_S7);
 
-  // [静态配置]
-  // KH: 常态连接 S3 (Channel 3: A2=0, A1=1, A0=0)
-  TMUX_KH_SetChannel(TMUX_CH_S2);
-  // KL: 常态连接 S2 (Channel 2: A2=0, A1=0, A0=1)
-  TMUX_KL_SetChannel(TMUX_CH_S3);
-  // KB: 初始状态设为断开
-  TMUX_KB_SetChannel(TMUX_CH_S7);
+  // sprintf(msg, "GPIO Start config\r\n");
+  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  // HAL_Delay(100);
 
-  sprintf(msg, "GPIO Start config\r\n");
-  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-  HAL_Delay(100);
+  // //2. AD4007 初始化
+  // if (AD4007_Init_Safe() == HAL_OK) {
+  //     strcpy(msg, "System Ready: AD4007 OK\r\n");
+  // } else {
+  //     strcpy(msg, "System Ready: AD4007 FAIL\r\n");
+  // }
+  // HAL_Delay(100); // 等待USB连接稳定
+  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
 
-  //2. AD4007 初始化
-  if (AD4007_Init_Safe() == HAL_OK) {
-      strcpy(msg, "System Ready: AD4007 OK\r\n");
-  } else {
-      strcpy(msg, "System Ready: AD4007 FAIL\r\n");
-  }
-  HAL_Delay(100); // 等待USB连接稳定
-  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  // // 3. 初始读取一次 ADC，验证功能
+  // int32_t code = AD4007_Read_Single();
+  // float voltage = AD4007_ConvertToVoltage(code);
+  // sprintf(msg, "ADC:%.4f V\r\n", voltage);
+  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
 
-  // 3. 初始读取一次 ADC，验证功能
-  int32_t code = AD4007_Read_Single();
-  float voltage = AD4007_ConvertToVoltage(code);
-  sprintf(msg, "ADC:%.4f V\r\n", voltage);
-  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
+  // HAL_Delay(100);
 
-  HAL_Delay(100);
-
-  // 3.[修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  __HAL_RCC_GPIOA_CLK_ENABLE();
+  // // 3.[修复 GPIO] 确保 PA8/PA9 复用为 HRTIM
+  // GPIO_InitTypeDef GPIO_InitStruct = {0};
+  // __HAL_RCC_GPIOA_CLK_ENABLE();
   
-  // PA8 -> HRTIM_CHA1, PA9 -> HRTIM_CHA2
-  GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;       // 复用推挽输出
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  // // PA8 -> HRTIM_CHA1, PA9 -> HRTIM_CHA2
+  // GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
+  // GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;       // 复用推挽输出
+  // GPIO_InitStruct.Pull = GPIO_NOPULL;
+  // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  // GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
+  // HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 
-  // 初始化 HRTIM1
-  MX_HRTIM1_Init();
+  // // 初始化 HRTIM1
+  // MX_HRTIM1_Init();
   
 
-  // 2. 启动 Timer A 的计数器，并使能中断
-  // 修改参数为 TIMERINDEX，并检查返回值
-  if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
-  {
-      Error_Handler(); // 如果启动失败，进入错误处理
-  }
-  else{
-      sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
-      CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-  }
+  // // 2. 启动 Timer A 的计数器，并使能中断
+  // // 修改参数为 TIMERINDEX，并检查返回值
+  // if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
+  // {
+  //     Error_Handler(); // 如果启动失败，进入错误处理
+  // }
+  // else{
+  //     sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
+  //     CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  // }
 
-  // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
-  HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA2);
-  HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
+  // // 3. 启动 Timer A 的 PWM 输出 (TA1 和 TA2)
+  // HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA2);
+  // HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
 
-    // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
-  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
+  //   // 1. 先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
+  // HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
 
-  sprintf(msg, "HRTIM Started System-Wide\r\n");
-  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  // sprintf(msg, "HRTIM Started System-Wide\r\n");
+  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  //从这里结束注释
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -313,62 +314,70 @@ int main(void)
   //   // }
 
   // }
+
+  //while1先注释
   while (1)
   {
-      if (data_ready_flag)
-      {
-          data_ready_flag = 0; // 清除标志
+    /* USER CODE END WHILE */
 
-          // --- 开始打包数据到缓存 ---
-          uint8_t *p = &usb_tx_cache[sample_counter * PACKET_SIZE];
+    /* USER CODE BEGIN 3 */
+      // if (data_ready_flag)
+      // {
+      //     data_ready_flag = 0; // 清除标志
+
+      //     // --- 开始打包数据到缓存 ---
+      //     uint8_t *p = &usb_tx_cache[sample_counter * PACKET_SIZE];
           
-          // // 填充单点数据 (11字节)
-          // p[0] = 0xAA; 
-          // p[1] = (uint8_t)((current_adc_3us >> 24) & 0xFF);
-          // p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
-          // p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
-          // p[4] = (uint8_t)(current_adc_3us & 0xFF);
-          // p[5] = (uint8_t)((current_adc_300us >> 24) & 0xFF);
-          // p[6] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
-          // p[7] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
-          // p[8] = (uint8_t)(current_adc_300us & 0xFF);
-          // p[9] = 0x0D;
-          // p[10] = 0x0A;
-          // --- 2. 填充帧头 ---
-          p[0] = 0xAA; 
-          p[1] =  0xBB;
-          p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
-          p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
-          p[4] = (uint8_t)(current_adc_3us & 0xFF);
-          p[5] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
-          p[6] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
-          p[7] = (uint8_t)(current_adc_300us & 0xFF);
-          uint8_t checksum = 0;
-          for(int i = 2; i <= 7; i++) // 遍历 p[2] 到 p[7]
-          {
-              checksum ^= p[i];
-          }
-          p[8] = checksum;
-          p[9] = 0xCC;
-          p[10] = 0xDD;
+      //     // // 填充单点数据 (11字节)
+      //     // p[0] = 0xAA; 
+      //     // p[1] = (uint8_t)((current_adc_3us >> 24) & 0xFF);
+      //     // p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
+      //     // p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
+      //     // p[4] = (uint8_t)(current_adc_3us & 0xFF);
+      //     // p[5] = (uint8_t)((current_adc_300us >> 24) & 0xFF);
+      //     // p[6] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
+      //     // p[7] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
+      //     // p[8] = (uint8_t)(current_adc_300us & 0xFF);
+      //     // p[9] = 0x0D;
+      //     // p[10] = 0x0A;
+      //     // --- 2. 填充帧头 ---
+      //     p[0] = 0xAA; 
+      //     p[1] =  0xBB;
+      //     p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
+      //     p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
+      //     p[4] = (uint8_t)(current_adc_3us & 0xFF);
+      //     p[5] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
+      //     p[6] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
+      //     p[7] = (uint8_t)(current_adc_300us & 0xFF);
+      //     uint8_t checksum = 0;
+      //     for(int i = 2; i <= 7; i++) // 遍历 p[2] 到 p[7]
+      //     {
+      //         checksum ^= p[i];
+      //     }
+      //     p[8] = checksum;
+      //     p[9] = 0xCC;
+      //     p[10] = 0xDD;
 
-          sample_counter++;
+      //     sample_counter++;
 
-          // --- 当达到指定的批次数量时，通过 USB 发送一次 ---
-          if (sample_counter >= BATCH_COUNT)
-          {
-              // 检查 CDC 发送状态，如果忙则循环等待或做丢包处理
-              // 使用你的非阻塞发送函数 CDC_Transmit_FS2
-              uint8_t result = CDC_Transmit_FS2(usb_tx_cache, TX_BUF_SIZE);
+      //     // --- 当达到指定的批次数量时，通过 USB 发送一次 ---
+      //     if (sample_counter >= BATCH_COUNT)
+      //     {
+      //         // 检查 CDC 发送状态，如果忙则循环等待或做丢包处理
+      //         // 使用你的非阻塞发送函数 CDC_Transmit_FS2
+      //         uint8_t result = CDC_Transmit_FS2(usb_tx_cache, TX_BUF_SIZE);
               
-              if (result == USBD_OK) {
-                  sample_counter = 0; // 发送成功才清空计数器
-              } else {
-                  // 如果 USB 忙，建议这里直接放弃这一包或者覆盖，防止主循环卡死
-                  sample_counter = 0; 
-              }
-          }
-      }
+      //         if (result == USBD_OK) {
+      //             sample_counter = 0; // 发送成功才清空计数器
+      //         } else {
+      //             // 如果 USB 忙，建议这里直接放弃这一包或者覆盖，防止主循环卡死
+      //             sample_counter = 0; 
+      //         }
+      //     }
+      // }
+    sprintf(msg, "while\r\n");
+    CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+    HAL_Delay(1000); 
     /* USER CODE END 3 */
   }
 }
