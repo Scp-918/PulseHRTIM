@@ -172,7 +172,7 @@ int main(void)
   // MX_I2C3_Init();
   // MX_SPI1_Init();
   MX_SPI3_Init();
-  // MX_USART1_UART_Init();
+  MX_USART1_UART_Init();
   MX_USB_Device_Init();
 
   //初始化TMUX GPIO
@@ -183,13 +183,13 @@ int main(void)
 
   char msg[64];
   //从这里开始先注释
-  // // 1. 电源上电序列
-  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);  // E5V
-  // HAL_Delay(50);
-  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);  // E3.3V
-  // HAL_Delay(50);
-  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET); // E4V
-  // HAL_Delay(50); // 等待电源稳定
+  // 1. 电源上电序列
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);  // E5V
+  HAL_Delay(50);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);  // E3.3V
+  HAL_Delay(50);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET); // E4V
+  HAL_Delay(50); // 等待电源稳定
 
   // // [静态配置]
   // // KH: 常态连接 S3 (Channel 3: A2=0, A1=1, A0=0)
