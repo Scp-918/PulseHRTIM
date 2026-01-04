@@ -335,8 +335,19 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
+  // USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
+  // USBD_CDC_ReceivePacket(&hUsbDeviceFS);
+  // return (USBD_OK);
+  // 1. 【新增代码】将接收到的数据回传给上位机
+  // 利用您已经实现的 CDC_Transmit_FS2 函数（环形缓冲区版本）发送数据
+  // Buf 包含了接收到的数据，*Len 是接收到的数据长度
+  CDC_Transmit_FS2(Buf, *Len); 
+
+  // 2. 【原有代码】准备下一次接收
+  // 这一步非常重要，必须告知 USB 驱动重新准备好接收缓冲区，否则将无法接收后续数据
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
+  
   return (USBD_OK);
   /* USER CODE END 6 */
 }
