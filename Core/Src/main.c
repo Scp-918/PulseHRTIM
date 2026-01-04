@@ -73,7 +73,12 @@ volatile uint8_t data_ready_flag = 0; // 采样完成标志位
 
 uint8_t usb_tx_cache[TX_BUF_SIZE]; // USB 发送缓存
 uint8_t sample_counter = 0;        // 缓存计数器
+
 uint8_t rx1_byte;;               // USART1接收单字节变量
+
+extern uint8_t  USB_Rx_Flag;
+extern uint8_t  USB_Rx_Buffer[256];
+extern uint32_t USB_Rx_Len;
 
 // 用于暂存采集到的数据
 volatile int32_t current_adc_3us = 0;
@@ -173,7 +178,7 @@ int main(void)
   // MX_I2C3_Init();
   // MX_SPI1_Init();
   MX_SPI3_Init();
-  // MX_USART1_UART_Init();
+  MX_USART1_UART_Init();
   MX_USB_Device_Init();
 
   //初始化TMUX GPIO
@@ -199,7 +204,7 @@ int main(void)
   // TMUX_KL_SetChannel(TMUX_CH_S3);
   // // KB: 初始状态设为断开
   // TMUX_KB_SetChannel(TMUX_CH_S7);
-
+  HAL_Delay(3000);
   sprintf(msg, "GPIO Start config\r\n");
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   HAL_Delay(100);
@@ -325,6 +330,20 @@ int main(void)
   // }
 
   //while1先注释
+  // 1. 硬件复位序列
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_SET);   // PE1 拉高触发复位
+  HAL_Delay(50);                                        // 保持 50ms
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_RESET); // 拉低进入工作状态
+  HAL_Delay(500);                                       // 等待模块启动启动时间大约 400ms
+
+  // 2. 发送唤醒流：连续发送 0xFF 确保 RX 线被拉高超过 1ms
+  // 0xFF 在 UART 线上表现为起始位(低)后跟 8 个高电平
+  uint8_t wake_payload[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 10);
+
+
+  HAL_Delay(10);                                        // 延时等待模块唤醒
+  HAL_UART_Transmit(&huart1, (uint8_t*)"<RD_BAUD>", 9, 100);
   while (1)
   {
     /* USER CODE END WHILE */
@@ -385,9 +404,11 @@ int main(void)
       //     }
       // }
     /* 1. 通过 USB 确认主循环运行 (有线) */
-      char *process_msg = "while process\r\n";
+      char *process_msg = "while process";
       CDC_Transmit_FS2((uint8_t*)process_msg, strlen(process_msg));
-
+      // // /* 通过 UART 确认主循环运行 */
+      // char *data = "UART while process\r\n";
+      // HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
       // /* 2. 初始化 HJ131 并通过 USB 报告质量 (有线诊断) */
       // BLE_Run_Test_Cycle();
 

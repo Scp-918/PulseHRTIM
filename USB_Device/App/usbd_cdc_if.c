@@ -37,6 +37,10 @@
 volatile uint32_t UserTxBufPtrIn = 0;  // 写入指针 (Head)
 volatile uint32_t UserTxBufPtrOut = 0; // 读出/发送指针 (Tail)
 volatile uint8_t  UserTxBufBusy = 0;   // 发送忙标志
+
+uint8_t  USB_Rx_Flag = 0;
+uint8_t  USB_Rx_Buffer[256];
+uint32_t USB_Rx_Len = 0;
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -346,8 +350,11 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   // 1. 【新增代码】将接收到的数据回传给上位机
   // 利用您已经实现的 CDC_Transmit_FS2 函数（环形缓冲区版本）发送数据
   // Buf 包含了接收到的数据，*Len 是接收到的数据长度
+  // // 1. 将数据拷贝到临时缓冲区，供主循环处理
+  // USB_Rx_Len = (*Len < 256) ? *Len : 256;
+  // memcpy(USB_Rx_Buffer, Buf, USB_Rx_Len);
+  // USB_Rx_Flag = 1; // 触发标志位
   CDC_Transmit_FS2(Buf, *Len);
-  HAL_Delay(200);
   HAL_UART_Transmit(&huart1, Buf, *Len, 100);
 
   // 2. 【原有代码】准备下一次接收
