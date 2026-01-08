@@ -339,7 +339,7 @@ int main(void)
   // 2. 发送唤醒流：连续发送 0xFF 确保 RX 线被拉高超过 1ms
   // 0xFF 在 UART 线上表现为起始位(低)后跟 8 个高电平
   uint8_t wake_payload[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 10);
+  HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 100);
 
 
   HAL_Delay(100);                                        // 延时等待模块唤醒
@@ -404,11 +404,9 @@ int main(void)
       //     }
       // }
     /* 1. 通过 USB 确认主循环运行 (有线) */
-      char *process_msg = "while process";
+      char *process_msg = "<RD_BAUD>";
       CDC_Transmit_FS2((uint8_t*)process_msg, strlen(process_msg));
-      // // /* 通过 UART 确认主循环运行 */
-      // char *data = "UART while process\r\n";
-      // HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
+
       // /* 2. 初始化 HJ131 并通过 USB 报告质量 (有线诊断) */
       // BLE_Run_Test_Cycle();
 
@@ -417,6 +415,24 @@ int main(void)
       // HAL_Delay(50); 
       // // 发送 "ble process" 加换行符，方便上位机查看
       // BLE_Send_Data("ble process\r\n");
+
+      //   // 1. 硬件复位序列
+      // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_SET);   // PE1 拉高触发复位
+      // HAL_Delay(50);                                        // 保持 50ms
+      // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_RESET); // 拉低进入工作状态
+      // HAL_Delay(500);                                       // 等待模块启动启动时间大约 400ms
+
+      // // 2. 发送唤醒流：连续发送 0xFF 确保 RX 线被拉高超过 1ms
+      // // 0xFF 在 UART 线上表现为起始位(低)后跟 8 个高电平
+      // uint8_t wake_payload[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+      // HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 100);
+      // HAL_Delay(500);
+      // // /* 通过 UART 确认主循环运行 */
+      char *data = "<RD_BAUD>";
+      HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
+
+
+      HAL_Delay(100);
 
       /* 4. 延时1秒进入下一次循环 */
       HAL_Delay(1000);
