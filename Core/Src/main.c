@@ -178,7 +178,7 @@ int main(void)
   // MX_I2C3_Init();
   // MX_SPI1_Init();
   MX_SPI3_Init();
-  MX_USART1_UART_Init();
+  // MX_USART1_UART_Init();
   MX_USB_Device_Init();
 
   //初始化TMUX GPIO
@@ -210,7 +210,7 @@ int main(void)
   HAL_Delay(100);
 
   // 【关键】启动USART1的中断接收，每次接收1个字节
-  HAL_UART_Receive_IT(&huart1, &rx1_byte, 1);
+  // HAL_UART_Receive_IT(&huart1, &rx1_byte, 1);
   sprintf(msg, "UASRT1 Start config\r\n");
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   HAL_Delay(100);
@@ -338,8 +338,8 @@ int main(void)
 
   // 2. 发送唤醒流：连续发送 0xFF 确保 RX 线被拉高超过 1ms
   // 0xFF 在 UART 线上表现为起始位(低)后跟 8 个高电平
-  uint8_t wake_payload[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 100);
+  // uint8_t wake_payload[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  // HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 100);
 
 
   HAL_Delay(100);                                        // 延时等待模块唤醒
@@ -428,8 +428,8 @@ int main(void)
       // HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 100);
       // HAL_Delay(500);
       // // /* 通过 UART 确认主循环运行 */
-      char *data = "<RD_BAUD>";
-      HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
+      // char *data = "<RD_BAUD>";
+      // HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
 
 
       HAL_Delay(100);
