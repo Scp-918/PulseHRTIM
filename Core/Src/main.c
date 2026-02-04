@@ -25,6 +25,7 @@
 #include "usb_device.h"
 #include "gpio.h"
 
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "usbd_cdc_if.h"
@@ -32,6 +33,7 @@
 #include <stdio.h>
 #include "TMUX1108.h"
 #include "AD4007.h" 
+#include "MAX30101.h"
 #include "ble.h"  // 引入BLE头文件
 
 /* 全局变量用于存储 中断次数 */
@@ -175,10 +177,10 @@ int main(void)
   /* USER CODE BEGIN 2 */
   MX_GPIO_Init();
   // MX_HRTIM1_Init();
-  // MX_I2C3_Init();
+  MX_I2C3_Init();
   // MX_SPI1_Init();
   MX_SPI3_Init();
-  MX_USART1_UART_Init();
+  // MX_USART1_UART_Init();
   MX_USB_Device_Init();
 
   //初始化TMUX GPIO
@@ -211,11 +213,11 @@ int main(void)
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   HAL_Delay(100);
 
-  // 【关键】启动USART1的中断接收，每次接收1个字节
-  HAL_UART_Receive_IT(&huart1, &rx1_byte, 1);
-  sprintf(msg, "UASRT1 Start config\r\n");
-  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-  HAL_Delay(100);
+  // // 【关键】启动USART1的中断接收，每次接收1个字节
+  // HAL_UART_Receive_IT(&huart1, &rx1_byte, 1);
+  // sprintf(msg, "UASRT1 Start config\r\n");
+  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  // HAL_Delay(100);
   // //2. AD4007 初始化
   // if (AD4007_Init_Safe() == HAL_OK) {
   //     strcpy(msg, "System Ready: AD4007 OK\r\n");
@@ -332,11 +334,11 @@ int main(void)
   // }
 
   //while1先注释
-  // 1. 硬件复位序列
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_SET);   // PE1 拉高触发复位
-  HAL_Delay(50);                                        // 保持 50ms
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_RESET); // 拉低进入工作状态
-  HAL_Delay(500);                                       // 等待模块启动启动时间大约 400ms
+  // // 1. 硬件复位序列
+  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_SET);   // PE1 拉高触发复位
+  // HAL_Delay(50);                                        // 保持 50ms
+  // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_RESET); // 拉低进入工作状态
+  // HAL_Delay(500);                                       // 等待模块启动启动时间大约 400ms
 
   // 2. 发送唤醒流：连续发送 0xFF 确保 RX 线被拉高超过 1ms
   // 0xFF 在 UART 线上表现为起始位(低)后跟 8 个高电平
@@ -346,6 +348,26 @@ int main(void)
 
   HAL_Delay(100);                                        // 延时等待模块唤醒
   // HAL_UART_Transmit(&huart1, (uint8_t*)"<RD_BAUD>", 9, 100);
+  uint8_t init_result = MAX30101_Init();
+  if (init_result==1) {
+      // 通过USB发送初始化成功信息
+      uint8_t msg[] = "MAX30101 Init Success\r\n";
+      CDC_Transmit_FS(msg, sizeof(msg)-1);
+  } else {
+      uint8_t msg[] = "MAX30101 Init Failed! Check Connections.\r\n";
+      CDC_Transmit_FS(msg, sizeof(msg)-1);
+      uint8_t msg2[32];
+      sprintf((char*)msg2, "MAX30101 id is %d\r\n", init_result);
+      CDC_Transmit_FS(msg2, strlen((char*)msg2));
+  }
+  
+  uint32_t last_switch_tick = 0;
+  uint32_t last_read_id_tick = 0;
+  uint32_t last_pd_read_tick = 0;
+  
+  uint8_t led_state = 0; // 0: Green, 1: Red, 2: IR
+  char usb_buffer[64];
+
   while (1)
   {
     /* USER CODE END WHILE */
@@ -405,39 +427,81 @@ int main(void)
       //         }
       //     }
       // }
-    /* 1. 通过 USB 确认主循环运行 (有线) */
-      char *process_msg = "<RD_BAUD>";
-      CDC_Transmit_FS2((uint8_t*)process_msg, strlen(process_msg));
+    
+    uint32_t current_tick = HAL_GetTick();
 
-      // /* 2. 初始化 HJ131 并通过 USB 报告质量 (有线诊断) */
-      // BLE_Run_Test_Cycle();
+    // ---------------------------------------------------------
+    // 2.3.1 测试发指令：每秒切换一次光 (验证5V焊接)
+    // ---------------------------------------------------------
+    if (current_tick - last_switch_tick >= 1000) {
+        last_switch_tick = current_tick;
+        
+        // 先关闭所有灯
+        MAX30101_WriteReg(REG_LED1_PA, 0x00);
+        MAX30101_WriteReg(REG_LED2_PA, 0x00);
+        MAX30101_WriteReg(REG_LED3_PA, 0x00);
+        
+        if (led_state == 0) {
+            // 绿光 (LED3) - 设置电流 0x24 (约7mA，可视情况调大到0x7F)
+            MAX30101_WriteReg(REG_LED3_PA, 0x24);
+            CDC_Transmit_FS((uint8_t*)"LED: Green\r\n", 12);
+            led_state = 1;
+        } else if (led_state == 1) {
+            // 红光 (LED1)
+            MAX30101_WriteReg(REG_LED1_PA, 0x24);
+            CDC_Transmit_FS((uint8_t*)"LED: Red\r\n", 10);
+            led_state = 2;
+        } else {
+            // 红外光 (LED2) - 肉眼不可见，可用手机摄像头观察
+            MAX30101_WriteReg(REG_LED2_PA, 0x24);
+            CDC_Transmit_FS((uint8_t*)"LED: IR\r\n", 9);
+            led_state = 0;
+        }
+    }
 
-      // /* 3. 通过 BLE 发送数据 (无线验证) */
-      // // 延时一小段时间，让之前的配置指令处理完成，确保缓冲区干净
-      // HAL_Delay(50); 
-      // // 发送 "ble process" 加换行符，方便上位机查看
-      // BLE_Send_Data("ble process\r\n");
+    // // ---------------------------------------------------------
+    // // 2.3.2 测试读指令：每秒读取一次Part ID (验证I2C/1.8V/GND)
+    // // ---------------------------------------------------------
+    // if (current_tick - last_read_id_tick >= 1000) {
+    //     last_read_id_tick = current_tick; // 稍微错开时间
+        
+    //     uint8_t part_id = MAX30101_GetPartID();
+    //     uint16_t len = sprintf(usb_buffer, "Part ID: 0x%02X\r\n", part_id);
+    //     CDC_Transmit_FS((uint8_t*)usb_buffer, len);
+    // }
 
-      //   // 1. 硬件复位序列
-      // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_SET);   // PE1 拉高触发复位
-      // HAL_Delay(50);                                        // 保持 50ms
-      // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_RESET); // 拉低进入工作状态
-      // HAL_Delay(500);                                       // 等待模块启动启动时间大约 400ms
-
-      // // 2. 发送唤醒流：连续发送 0xFF 确保 RX 线被拉高超过 1ms
-      // // 0xFF 在 UART 线上表现为起始位(低)后跟 8 个高电平
-      // uint8_t wake_payload[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-      // HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 100);
-      // HAL_Delay(500);
-      // // /* 通过 UART 确认主循环运行 */
-      // char *data = "<RD_BAUD>";
-      // HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
-
-
-      HAL_Delay(100);
-
-      /* 4. 延时1秒进入下一次循环 */
-      HAL_Delay(1000);
+    // // ---------------------------------------------------------
+    // // 2.3.3 测试PD：每秒读取一次PD数据
+    // // ---------------------------------------------------------
+    // if (current_tick - last_pd_read_tick >= 1000) { // 实际应用中应更频繁读取，这里仅做连接测试
+    //     last_pd_read_tick = current_tick;
+        
+    //     // 读取FIFO数据，MAX30101每个样本3字节 (18-bit)
+    //     // 如果开了多LED，样本会交错。这里简单读取6个字节（假设FIFO里有数据）
+    //     uint8_t fifo_data[6] = {0};
+        
+    //     // 读 FIFO 指针查看是否有数据
+    //     uint8_t wr_ptr, rd_ptr;
+    //     MAX30101_ReadReg(REG_FIFO_WR_PTR, &wr_ptr);
+    //     MAX30101_ReadReg(REG_FIFO_RD_PTR, &rd_ptr);
+        
+    //     if (wr_ptr != rd_ptr) {
+    //         // 有数据，读一个样点 (假设3字节模式)
+    //         MAX30101_ReadFIFO(fifo_data, 3);
+            
+    //         // 组合数据 MSB -> LSB
+    //         uint32_t val = ((fifo_data[0] << 16) | (fifo_data[1] << 8) | fifo_data[2]) & 0x03FFFF;
+            
+    //         uint16_t len = sprintf(usb_buffer, "PD Val: %lu\r\n", val);
+    //         CDC_Transmit_FS((uint8_t*)usb_buffer, len);
+    //     } else {
+    //         // FIFO为空
+    //         // CDC_Transmit_FS((uint8_t*)"FIFO Empty\r\n", 12);
+    //     }
+    // }
+    
+    // 简单的循环延时，防止while跑太快锁死USB发送
+    HAL_Delay(10);
     /* USER CODE END 3 */
   }
 }
