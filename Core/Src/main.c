@@ -178,7 +178,7 @@ int main(void)
   // MX_I2C3_Init();
   // MX_SPI1_Init();
   MX_SPI3_Init();
-  // MX_USART1_UART_Init();
+  MX_USART1_UART_Init();
   MX_USB_Device_Init();
 
   //初始化TMUX GPIO
@@ -204,13 +204,15 @@ int main(void)
   // TMUX_KL_SetChannel(TMUX_CH_S3);
   // // KB: 初始状态设为断开
   // TMUX_KB_SetChannel(TMUX_CH_S7);
+
+
   HAL_Delay(3000);
   sprintf(msg, "GPIO Start config\r\n");
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   HAL_Delay(100);
 
   // 【关键】启动USART1的中断接收，每次接收1个字节
-  // HAL_UART_Receive_IT(&huart1, &rx1_byte, 1);
+  HAL_UART_Receive_IT(&huart1, &rx1_byte, 1);
   sprintf(msg, "UASRT1 Start config\r\n");
   CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
   HAL_Delay(100);
