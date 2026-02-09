@@ -473,32 +473,32 @@ int main(void)
     // // ---------------------------------------------------------
     // // 2.3.3 测试PD：每秒读取一次PD数据
     // // ---------------------------------------------------------
-    // if (current_tick - last_pd_read_tick >= 1000) { // 实际应用中应更频繁读取，这里仅做连接测试
-    //     last_pd_read_tick = current_tick;
+    if (current_tick - last_pd_read_tick >= 1000) { // 实际应用中应更频繁读取，这里仅做连接测试
+        last_pd_read_tick = current_tick;
         
-    //     // 读取FIFO数据，MAX30101每个样本3字节 (18-bit)
-    //     // 如果开了多LED，样本会交错。这里简单读取6个字节（假设FIFO里有数据）
-    //     uint8_t fifo_data[6] = {0};
+        // 读取FIFO数据，MAX30101每个样本3字节 (18-bit)
+        // 如果开了多LED，样本会交错。这里简单读取6个字节（假设FIFO里有数据）
+        uint8_t fifo_data[6] = {0};
         
-    //     // 读 FIFO 指针查看是否有数据
-    //     uint8_t wr_ptr, rd_ptr;
-    //     MAX30101_ReadReg(REG_FIFO_WR_PTR, &wr_ptr);
-    //     MAX30101_ReadReg(REG_FIFO_RD_PTR, &rd_ptr);
+        // 读 FIFO 指针查看是否有数据
+        uint8_t wr_ptr, rd_ptr;
+        MAX30101_ReadReg(REG_FIFO_WR_PTR, &wr_ptr);
+        MAX30101_ReadReg(REG_FIFO_RD_PTR, &rd_ptr);
         
-    //     if (wr_ptr != rd_ptr) {
-    //         // 有数据，读一个样点 (假设3字节模式)
-    //         MAX30101_ReadFIFO(fifo_data, 3);
+        if (wr_ptr != rd_ptr) {
+            // 有数据，读一个样点 (假设3字节模式)
+            MAX30101_ReadFIFO(fifo_data, 3);
             
-    //         // 组合数据 MSB -> LSB
-    //         uint32_t val = ((fifo_data[0] << 16) | (fifo_data[1] << 8) | fifo_data[2]) & 0x03FFFF;
+            // 组合数据 MSB -> LSB
+            uint32_t val = ((fifo_data[0] << 16) | (fifo_data[1] << 8) | fifo_data[2]) & 0x03FFFF;
             
-    //         uint16_t len = sprintf(usb_buffer, "PD Val: %lu\r\n", val);
-    //         CDC_Transmit_FS((uint8_t*)usb_buffer, len);
-    //     } else {
-    //         // FIFO为空
-    //         // CDC_Transmit_FS((uint8_t*)"FIFO Empty\r\n", 12);
-    //     }
-    // }
+            uint16_t len = sprintf(usb_buffer, "PD Val: %lu\r\n", val);
+            CDC_Transmit_FS((uint8_t*)usb_buffer, len);
+        } else {
+            // FIFO为空
+            // CDC_Transmit_FS((uint8_t*)"FIFO Empty\r\n", 12);
+        }
+    }
     
     // 简单的循环延时，防止while跑太快锁死USB发送
     HAL_Delay(10);

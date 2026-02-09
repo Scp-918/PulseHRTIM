@@ -33,11 +33,12 @@ uint8_t MAX30101_Init(void) {
     
     // 1. 检查ID，确认I2C通信正常
     if (!MAX30101_ReadReg(REG_PART_ID, &id)) {
-        return id; // I2C错误
+        return 0; // I2C错误
     }
     if (id != 0x15) { // MAX30101的Part ID通常是0x15
         // 注意：有些版本可能是0x11(MAX30105)等，视具体芯片而定，这里假设0x15
         // 如果读到0x00或0xFF，说明通讯失败
+        return 0;
     }
 
     // 2. 复位
