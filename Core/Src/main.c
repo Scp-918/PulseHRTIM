@@ -62,14 +62,16 @@ volatile uint8_t data_ready_flag = 0; // 采样完成标志位
 #define BATCH_COUNT 10       // 每积攒10个采样点发送一次 (可根据实时性需求调整)
 #define TX_BUF_SIZE (PACKET_SIZE * BATCH_COUNT)
 
+// USB 发送缓存和计数器
 uint8_t usb_tx_cache[TX_BUF_SIZE]; // USB 发送缓存
 uint8_t sample_counter = 0;        // 缓存计数器
-
-uint8_t rx1_byte;;               // USART1接收单字节变量
 
 extern uint8_t  USB_Rx_Flag;
 extern uint8_t  USB_Rx_Buffer[256];
 extern uint32_t USB_Rx_Len;
+
+// USART1接收单字节变量 (用于BLE模块数据接收)
+uint8_t rx1_byte;;               // USART1接收单字节变量
 
 // 暂存采集到的数据
 /* 全局变量用于存储 中断次数 */
@@ -142,7 +144,7 @@ int main(void)
   /* 初始化外设 ------------------------------------------------------------------*/
   MX_GPIO_Init();
   // MX_HRTIM1_Init();
-  MX_I2C3_Init();
+  // MX_I2C3_Init();
   // MX_SPI1_Init();
   MX_SPI3_Init();
   // MX_USART1_UART_Init();
@@ -160,13 +162,19 @@ int main(void)
   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET); // E4V
   HAL_Delay(50); // 等待电源稳定
 
-  // // [静态配置] 必须要改！
-  // // KH: 连接 S3 (Channel 3: A2=0, A1=1, A0=0)
-  // TMUX_KH_SetChannel(TMUX_CH_S2);
-  // // KL: 连接 S2 (Channel 2: A2=0, A1=0, A0=1)
-  // TMUX_KL_SetChannel(TMUX_CH_S3);
-  // // KB: 初始状态设为断开
-  // TMUX_KB_SetChannel(TMUX_CH_S7);
+  // // [静态配置] 注意参数设置！
+  // // KH 惠斯特电桥桥中高侧电压
+  TMUX_KH_SetChannel(TMUX_CH_S6);
+  // KL 惠斯特电桥桥中低侧电压
+  TMUX_KL_SetChannel(TMUX_CH_S1);
+  // KB 惠斯特电桥桥顶高侧电压
+  TMUX_KB_SetChannel(TMUX_CH_S6);
+  // // KH 惠斯特电桥桥中高侧电压
+  // TMUX_KH_SetChannel(TMUX_CH_S7);
+  // // KL 惠斯特电桥桥中低侧电压
+  // TMUX_KL_SetChannel(TMUX_CH_S1);
+  // // KB 惠斯特电桥桥顶高侧电压
+  // TMUX_KB_SetChannel(TMUX_CH_S5);
 
   //--------------------------初始化BLE----------------------------
   // BLE_System_Init();
@@ -190,227 +198,228 @@ int main(void)
   // uint8_t wake_payload[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   // HAL_UART_Transmit(&huart1, wake_payload, sizeof(wake_payload), 100);
 
-  HAL_Delay(3000);
-  sprintf(msg, "BLE Start config\r\n");
-  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-  HAL_Delay(100);
+  // HAL_Delay(3000);
+  // sprintf(msg, "BLE Start config\r\n");
+  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  // HAL_Delay(100);
 
   //--------------------------初始化PPG----------------------------
-  HAL_Delay(100);                                        // 延时等待模块唤醒
-  // HAL_UART_Transmit(&huart1, (uint8_t*)"<RD_BAUD>", 9, 100);
-  uint8_t init_result = MAX30101_Init();
-  if (init_result==1) {
-      // 通过USB发送初始化成功信息
-      uint8_t msg[] = "MAX30101 Init Success\r\n";
-      CDC_Transmit_FS(msg, sizeof(msg)-1);
-  } else {
-      uint8_t msg[] = "MAX30101 Init Failed! Check Connections.\r\n";
-      CDC_Transmit_FS(msg, sizeof(msg)-1);
-      uint8_t msg2[32];
-      sprintf((char*)msg2, "MAX30101 id is %d\r\n", init_result);
-      CDC_Transmit_FS(msg2, strlen((char*)msg2));
-  }
+  // HAL_Delay(100);                                        // 延时等待模块唤醒
+  // // HAL_UART_Transmit(&huart1, (uint8_t*)"<RD_BAUD>", 9, 100);
+  // uint8_t init_result = MAX30101_Init();
+  // if (init_result==1) {
+  //     // 通过USB发送初始化成功信息
+  //     uint8_t msg[] = "MAX30101 Init Success\r\n";
+  //     CDC_Transmit_FS(msg, sizeof(msg)-1);
+  // } else {
+  //     uint8_t msg[] = "MAX30101 Init Failed! Check Connections.\r\n";
+  //     CDC_Transmit_FS(msg, sizeof(msg)-1);
+  //     uint8_t msg2[32];
+  //     sprintf((char*)msg2, "MAX30101 id is %d\r\n", init_result);
+  //     CDC_Transmit_FS(msg2, strlen((char*)msg2));
+  // }
 
   //--------------------------初始化ADC----------------------------
-  // //AD4007 初始化
-  // if (AD4007_Init_Safe() == HAL_OK) {
-  //     strcpy(msg, "System Ready: AD4007 OK\r\n");
-  // } else {
-  //     strcpy(msg, "System Ready: AD4007 FAIL\r\n");
-  // }
-  // HAL_Delay(100); // 等待USB连接稳定
-  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  //AD4007 初始化
+  if (AD4007_Init_Safe() == HAL_OK) {
+      strcpy(msg, "System Ready: AD4007 OK\r\n");
+  } else {
+      strcpy(msg, "System Ready: AD4007 FAIL\r\n");
+  }
+  HAL_Delay(100); // 等待USB连接稳定
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
 
-  // //初始读取一次 ADC，验证功能
-  // int32_t code = AD4007_Read_Single();
-  // float voltage = AD4007_ConvertToVoltage(code);
-  // sprintf(msg, "ADC:%.4f V\r\n", voltage);
-  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
+  //初始读取一次 ADC，验证功能
+  int32_t code = AD4007_Read_Single();
+  float voltage = AD4007_ConvertToVoltage(code);
+  sprintf(msg, "ADC:%.4f V\r\n", voltage);
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));  
 
   //--------------------------初始化HRTIM----------------------------
-  // //确保 PA8/PA9 复用为 HRTIM
-  // GPIO_InitTypeDef GPIO_InitStruct = {0};
-  // __HAL_RCC_GPIOA_CLK_ENABLE();
+  //确保 PA8/PA9 复用为 HRTIM
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   
-  // // PA8 -> HRTIM_CHA1, PA9 -> HRTIM_CHA2
-  // GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
-  // GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;       // 复用推挽输出
-  // GPIO_InitStruct.Pull = GPIO_NOPULL;
-  // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  // GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
-  // HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  // PA8 -> HRTIM_CHA1, PA9 -> HRTIM_CHA2
+  GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;       // 复用推挽输出
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF13_HRTIM1; // 必须是 AF13
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  // // 初始化 HRTIM1
-  // MX_HRTIM1_Init();
+  // 初始化 HRTIM1
+  MX_HRTIM1_Init();
 
-  // // 启动 Timer A 的计数器，并使能中断
-  // // 修改参数为 TIMERINDEX，并检查返回值
-  // if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
-  // {
-  //     Error_Handler(); // 如果启动失败，进入错误处理
-  // }
-  // else{
-  //     sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
-  //     CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
-  // }
+  // 启动 Timer A 的计数器，并使能中断
+  // 修改参数为 TIMERINDEX，并检查返回值
+  if (HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_TIMER_A) != HAL_OK)
+  {
+      Error_Handler(); // 如果启动失败，进入错误处理
+  }
+  else{
+      sprintf(msg, "HRTIM Timer A started with interrupt!\r\n");
+      CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  }
 
-  // //启动 Timer A 的 PWM 输出 (TA1 和 TA2)
-  // HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA2);
-  // HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
+  //启动 Timer A 的 PWM 输出 (TA1 和 TA2)
+  HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA2);
+  HAL_HRTIM_WaveformOutputStart(&hhrtim1,  HRTIM_OUTPUT_TA1);
 
-  //   //先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
-  // HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
+  //先启动 Master Timer (虽然它可能不输出波形，但它提供时基和复位信号)
+  HAL_HRTIM_WaveformCountStart_IT(&hhrtim1, HRTIM_TIMERID_MASTER);
 
-  // sprintf(msg, "HRTIM Started System-Wide\r\n");
-  // CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
+  sprintf(msg, "HRTIM Started System-Wide\r\n");
+  CDC_Transmit_FS2((uint8_t*)msg, strlen(msg));
 
   //从这里结束注释
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint32_t last_switch_tick = 0;
-  uint32_t last_read_id_tick = 0;
-  uint32_t last_pd_read_tick = 0;
+  //--------------------------PPG数组传输测试----------------------------
+  // uint32_t last_switch_tick = 0;
+  // uint32_t last_read_id_tick = 0;
+  // uint32_t last_pd_read_tick = 0;
   
-  uint8_t led_state = 0; // 0: Green, 1: Red, 2: IR
-  char usb_buffer[64];
-  while (1)
-  {
-    /* USER CODE END WHILE */
+  // uint8_t led_state = 0; // 0: Green, 1: Red, 2: IR
+  // char usb_buffer[64];
+  // while (1)
+  // {
+  //   /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
-      // if (data_ready_flag)
-      // {
-      //     data_ready_flag = 0; // 清除标志
+  //   /* USER CODE BEGIN 3 */
+  //     // if (data_ready_flag)
+  //     // {
+  //     //     data_ready_flag = 0; // 清除标志
 
-      //     // --- 开始打包数据到缓存 ---
-      //     uint8_t *p = &usb_tx_cache[sample_counter * PACKET_SIZE];
+  //     //     // --- 开始打包数据到缓存 ---
+  //     //     uint8_t *p = &usb_tx_cache[sample_counter * PACKET_SIZE];
           
-      //     // // 填充单点数据 (11字节)
-      //     // p[0] = 0xAA; 
-      //     // p[1] = (uint8_t)((current_adc_3us >> 24) & 0xFF);
-      //     // p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
-      //     // p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
-      //     // p[4] = (uint8_t)(current_adc_3us & 0xFF);
-      //     // p[5] = (uint8_t)((current_adc_300us >> 24) & 0xFF);
-      //     // p[6] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
-      //     // p[7] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
-      //     // p[8] = (uint8_t)(current_adc_300us & 0xFF);
-      //     // p[9] = 0x0D;
-      //     // p[10] = 0x0A;
-      //     // --- 2. 填充帧头 ---
-      //     p[0] = 0xAA; 
-      //     p[1] =  0xBB;
-      //     p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
-      //     p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
-      //     p[4] = (uint8_t)(current_adc_3us & 0xFF);
-      //     p[5] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
-      //     p[6] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
-      //     p[7] = (uint8_t)(current_adc_300us & 0xFF);
-      //     uint8_t checksum = 0;
-      //     for(int i = 2; i <= 7; i++) // 遍历 p[2] 到 p[7]
-      //     {
-      //         checksum ^= p[i];
-      //     }
-      //     p[8] = checksum;
-      //     p[9] = 0xCC;
-      //     p[10] = 0xDD;
+  //     //     // // 填充单点数据 (11字节)
+  //     //     // p[0] = 0xAA; 
+  //     //     // p[1] = (uint8_t)((current_adc_3us >> 24) & 0xFF);
+  //     //     // p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
+  //     //     // p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
+  //     //     // p[4] = (uint8_t)(current_adc_3us & 0xFF);
+  //     //     // p[5] = (uint8_t)((current_adc_300us >> 24) & 0xFF);
+  //     //     // p[6] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
+  //     //     // p[7] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
+  //     //     // p[8] = (uint8_t)(current_adc_300us & 0xFF);
+  //     //     // p[9] = 0x0D;
+  //     //     // p[10] = 0x0A;
+  //     //     // --- 2. 填充帧头 ---
+  //     //     p[0] = 0xAA; 
+  //     //     p[1] =  0xBB;
+  //     //     p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
+  //     //     p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
+  //     //     p[4] = (uint8_t)(current_adc_3us & 0xFF);
+  //     //     p[5] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
+  //     //     p[6] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
+  //     //     p[7] = (uint8_t)(current_adc_300us & 0xFF);
+  //     //     uint8_t checksum = 0;
+  //     //     for(int i = 2; i <= 7; i++) // 遍历 p[2] 到 p[7]
+  //     //     {
+  //     //         checksum ^= p[i];
+  //     //     }
+  //     //     p[8] = checksum;
+  //     //     p[9] = 0xCC;
+  //     //     p[10] = 0xDD;
 
-      //     sample_counter++;
+  //     //     sample_counter++;
 
-      //     // --- 当达到指定的批次数量时，通过 USB 发送一次 ---
-      //     if (sample_counter >= BATCH_COUNT)
-      //     {
-      //         // 检查 CDC 发送状态，如果忙则循环等待或做丢包处理
-      //         // 使用你的非阻塞发送函数 CDC_Transmit_FS2
-      //         uint8_t result = CDC_Transmit_FS2(usb_tx_cache, TX_BUF_SIZE);
+  //     //     // --- 当达到指定的批次数量时，通过 USB 发送一次 ---
+  //     //     if (sample_counter >= BATCH_COUNT)
+  //     //     {
+  //     //         // 检查 CDC 发送状态，如果忙则循环等待或做丢包处理
+  //     //         // 使用你的非阻塞发送函数 CDC_Transmit_FS2
+  //     //         uint8_t result = CDC_Transmit_FS2(usb_tx_cache, TX_BUF_SIZE);
               
-      //         if (result == USBD_OK) {
-      //             sample_counter = 0; // 发送成功才清空计数器
-      //         } else {
-      //             // 如果 USB 忙，建议这里直接放弃这一包或者覆盖，防止主循环卡死
-      //             sample_counter = 0; 
-      //         }
-      //     }
-      // }
+  //     //         if (result == USBD_OK) {
+  //     //             sample_counter = 0; // 发送成功才清空计数器
+  //     //         } else {
+  //     //             // 如果 USB 忙，建议这里直接放弃这一包或者覆盖，防止主循环卡死
+  //     //             sample_counter = 0; 
+  //     //         }
+  //     //     }
+  //     // }
     
-    // uint32_t current_tick = HAL_GetTick();
+  //   // uint32_t current_tick = HAL_GetTick();
 
-    // // ---------------------------------------------------------
-    // // 2.3.1 测试发指令：每秒切换一次光 (验证5V焊接)
-    // // ---------------------------------------------------------
-    // if (current_tick - last_switch_tick >= 1000) {
-    //     last_switch_tick = current_tick;
+  //   // // ---------------------------------------------------------
+  //   // // 2.3.1 测试发指令：每秒切换一次光 (验证5V焊接)
+  //   // // ---------------------------------------------------------
+  //   // if (current_tick - last_switch_tick >= 1000) {
+  //   //     last_switch_tick = current_tick;
         
-    //     // 先关闭所有灯
-    //     MAX30101_WriteReg(REG_LED1_PA, 0x00);
-    //     MAX30101_WriteReg(REG_LED2_PA, 0x00);
-    //     MAX30101_WriteReg(REG_LED3_PA, 0x00);
+  //   //     // 先关闭所有灯
+  //   //     MAX30101_WriteReg(REG_LED1_PA, 0x00);
+  //   //     MAX30101_WriteReg(REG_LED2_PA, 0x00);
+  //   //     MAX30101_WriteReg(REG_LED3_PA, 0x00);
         
-    //     if (led_state == 0) {
-    //         // 绿光 (LED3) - 设置电流 0x24 (约7mA，可视情况调大到0x7F)
-    //         MAX30101_WriteReg(REG_LED3_PA, 0x24);
-    //         CDC_Transmit_FS((uint8_t*)"LED: Green\r\n", 12);
-    //         led_state = 1;
-    //     } else if (led_state == 1) {
-    //         // 红光 (LED1)
-    //         MAX30101_WriteReg(REG_LED1_PA, 0x24);
-    //         CDC_Transmit_FS((uint8_t*)"LED: Red\r\n", 10);
-    //         led_state = 2;
-    //     } else {
-    //         // 红外光 (LED2) - 肉眼不可见，可用手机摄像头观察
-    //         MAX30101_WriteReg(REG_LED2_PA, 0x24);
-    //         CDC_Transmit_FS((uint8_t*)"LED: IR\r\n", 9);
-    //         led_state = 0;
-    //     }
-    // }
+  //   //     if (led_state == 0) {
+  //   //         // 绿光 (LED3) - 设置电流 0x24 (约7mA，可视情况调大到0x7F)
+  //   //         MAX30101_WriteReg(REG_LED3_PA, 0x24);
+  //   //         CDC_Transmit_FS((uint8_t*)"LED: Green\r\n", 12);
+  //   //         led_state = 1;
+  //   //     } else if (led_state == 1) {
+  //   //         // 红光 (LED1)
+  //   //         MAX30101_WriteReg(REG_LED1_PA, 0x24);
+  //   //         CDC_Transmit_FS((uint8_t*)"LED: Red\r\n", 10);
+  //   //         led_state = 2;
+  //   //     } else {
+  //   //         // 红外光 (LED2) - 肉眼不可见，可用手机摄像头观察
+  //   //         MAX30101_WriteReg(REG_LED2_PA, 0x24);
+  //   //         CDC_Transmit_FS((uint8_t*)"LED: IR\r\n", 9);
+  //   //         led_state = 0;
+  //   //     }
+  //   // }
 
-    // // // ---------------------------------------------------------
-    // // // 2.3.2 测试读指令：每秒读取一次Part ID (验证I2C/1.8V/GND)
-    // // // ---------------------------------------------------------
-    // // if (current_tick - last_read_id_tick >= 1000) {
-    // //     last_read_id_tick = current_tick; // 稍微错开时间
+  //   // // // ---------------------------------------------------------
+  //   // // // 2.3.2 测试读指令：每秒读取一次Part ID (验证I2C/1.8V/GND)
+  //   // // // ---------------------------------------------------------
+  //   // // if (current_tick - last_read_id_tick >= 1000) {
+  //   // //     last_read_id_tick = current_tick; // 稍微错开时间
         
-    // //     uint8_t part_id = MAX30101_GetPartID();
-    // //     uint16_t len = sprintf(usb_buffer, "Part ID: 0x%02X\r\n", part_id);
-    // //     CDC_Transmit_FS((uint8_t*)usb_buffer, len);
-    // // }
+  //   // //     uint8_t part_id = MAX30101_GetPartID();
+  //   // //     uint16_t len = sprintf(usb_buffer, "Part ID: 0x%02X\r\n", part_id);
+  //   // //     CDC_Transmit_FS((uint8_t*)usb_buffer, len);
+  //   // // }
 
-    // // // ---------------------------------------------------------
-    // // // 2.3.3 测试PD：每秒读取一次PD数据
-    // // // ---------------------------------------------------------
-    // if (current_tick - last_pd_read_tick >= 1000) { // 实际应用中应更频繁读取，这里仅做连接测试
-    //     last_pd_read_tick = current_tick;
+  //   // // // ---------------------------------------------------------
+  //   // // // 2.3.3 测试PD：每秒读取一次PD数据
+  //   // // // ---------------------------------------------------------
+  //   // if (current_tick - last_pd_read_tick >= 1000) { // 实际应用中应更频繁读取，这里仅做连接测试
+  //   //     last_pd_read_tick = current_tick;
         
-    //     // 读取FIFO数据，MAX30101每个样本3字节 (18-bit)
-    //     // 如果开了多LED，样本会交错。这里简单读取6个字节（假设FIFO里有数据）
-    //     uint8_t fifo_data[6] = {0};
+  //   //     // 读取FIFO数据，MAX30101每个样本3字节 (18-bit)
+  //   //     // 如果开了多LED，样本会交错。这里简单读取6个字节（假设FIFO里有数据）
+  //   //     uint8_t fifo_data[6] = {0};
         
-    //     // 读 FIFO 指针查看是否有数据
-    //     uint8_t wr_ptr, rd_ptr;
-    //     MAX30101_ReadReg(REG_FIFO_WR_PTR, &wr_ptr);
-    //     MAX30101_ReadReg(REG_FIFO_RD_PTR, &rd_ptr);
+  //   //     // 读 FIFO 指针查看是否有数据
+  //   //     uint8_t wr_ptr, rd_ptr;
+  //   //     MAX30101_ReadReg(REG_FIFO_WR_PTR, &wr_ptr);
+  //   //     MAX30101_ReadReg(REG_FIFO_RD_PTR, &rd_ptr);
         
-    //     if (wr_ptr != rd_ptr) {
-    //         // 有数据，读一个样点 (假设3字节模式)
-    //         MAX30101_ReadFIFO(fifo_data, 3);
+  //   //     if (wr_ptr != rd_ptr) {
+  //   //         // 有数据，读一个样点 (假设3字节模式)
+  //   //         MAX30101_ReadFIFO(fifo_data, 3);
             
-    //         // 组合数据 MSB -> LSB
-    //         uint32_t val = ((fifo_data[0] << 16) | (fifo_data[1] << 8) | fifo_data[2]) & 0x03FFFF;
+  //   //         // 组合数据 MSB -> LSB
+  //   //         uint32_t val = ((fifo_data[0] << 16) | (fifo_data[1] << 8) | fifo_data[2]) & 0x03FFFF;
             
-    //         uint16_t len = sprintf(usb_buffer, "PD Val: %lu\r\n", val);
-    //         CDC_Transmit_FS((uint8_t*)usb_buffer, len);
-    //     } else {
-    //         // FIFO为空
-    //         // CDC_Transmit_FS((uint8_t*)"FIFO Empty\r\n", 12);
-    //     }
-    // }
+  //   //         uint16_t len = sprintf(usb_buffer, "PD Val: %lu\r\n", val);
+  //   //         CDC_Transmit_FS((uint8_t*)usb_buffer, len);
+  //   //     } else {
+  //   //         // FIFO为空
+  //   //         // CDC_Transmit_FS((uint8_t*)"FIFO Empty\r\n", 12);
+  //   //     }
+  //   // }
     
-    // 简单的循环延时，防止while跑太快锁死USB发送
-    HAL_Delay(10);
-    /* USER CODE END 3 */
-  }
+  //   // 简单的循环延时，防止while跑太快锁死USB发送
+  //   HAL_Delay(10);
+  //   /* USER CODE END 3 */
+  // }
 
   //--------------------------单次数组传输----------------------------
   /* USER CODE BEGIN WHILE */
@@ -469,6 +478,62 @@ int main(void)
   //   // }
 
   // }
+
+  //--------------------------多次传输----------------------------
+  
+  char usb_buffer[64];
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+      if (data_ready_flag)
+      {
+          data_ready_flag = 0; // 清除标志
+
+          // --- 开始打包数据到缓存 ---
+          uint8_t *p = &usb_tx_cache[sample_counter * PACKET_SIZE];
+          
+          // --- 2. 填充帧头 ---
+          p[0] = 0xAA; 
+          p[1] =  0xBB;
+          p[2] = (uint8_t)((current_adc_3us >> 16) & 0xFF);
+          p[3] = (uint8_t)((current_adc_3us >> 8) & 0xFF);
+          p[4] = (uint8_t)(current_adc_3us & 0xFF);
+          p[5] = (uint8_t)((current_adc_300us >> 16) & 0xFF);
+          p[6] = (uint8_t)((current_adc_300us >> 8) & 0xFF);
+          p[7] = (uint8_t)(current_adc_300us & 0xFF);
+          uint8_t checksum = 0;
+          for(int i = 2; i <= 7; i++) // 遍历 p[2] 到 p[7]
+          {
+              checksum ^= p[i];
+          }
+          p[8] = checksum;
+          p[9] = 0xCC;
+          p[10] = 0xDD;
+
+          sample_counter++;
+
+          // --- 当达到指定的批次数量时，通过 USB 发送一次 ---
+          if (sample_counter >= BATCH_COUNT)
+          {
+              // 检查 CDC 发送状态，如果忙则循环等待或做丢包处理
+              // 使用你的非阻塞发送函数 CDC_Transmit_FS2
+              uint8_t result = CDC_Transmit_FS2(usb_tx_cache, TX_BUF_SIZE);
+              
+              if (result == USBD_OK) {
+                  sample_counter = 0; // 发送成功才清空计数器
+              } else {
+                  // 如果 USB 忙，建议这里直接放弃这一包或者覆盖，防止主循环卡死
+                  sample_counter = 0; 
+              }
+          }
+      }
+    
+    // 简单的循环延时，防止while跑太快锁死USB发送
+    HAL_Delay(10);
+    /* USER CODE END 3 */
+  }
   /* USER CODE END 3 */
 }
 
@@ -488,15 +553,15 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_HSI48;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
-  RCC_OscInitStruct.PLL.PLLN = 18;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV6;
+  RCC_OscInitStruct.PLL.PLLN = 50;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV6;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {

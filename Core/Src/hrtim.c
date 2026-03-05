@@ -25,12 +25,15 @@
 
 /* USER CODE BEGIN 0 */
 //计算pCompareCfg.CompareValue的计数器标志
-float comp1_start=2;//3us
-float comp2_start=498;//3us
+float comp1_start=2;//2us
+float comp2_start=2000;//2000us
 //换算为主频下的计数器标志
-#define HRTIM_CLOCK_FREQ_F  144 // HRTIM 时钟频率 144 MHz,取us统一计算
-int16_t comp1_start_num;//3us对应的计数器数
-int16_t comp2_start_num;//300us对应的计数器数
+#define HRTIM_CLOCK_FREQ_F  100 // HRTIM 时钟频率 100 MHz,取us统一计算
+#define HRTIM_MASTER_PRESCALER_DIV 4
+#define HRTIM_TIMA_PRESCALER_DIV 4
+#define TA2_PULSE_WIDTH_US 1
+int16_t comp1_start_num;//2us对应的计数器数
+int16_t comp2_start_num;//2000us对应的计数器数
 /* USER CODE END 0 */
 
 HRTIM_HandleTypeDef hhrtim1;
@@ -50,8 +53,8 @@ void MX_HRTIM1_Init(void)
   HRTIM_OutputCfgTypeDef pOutputCfg = {0};
 
   /* USER CODE BEGIN HRTIM1_Init 1 */
-  comp1_start_num = (int16_t)ceil(comp1_start * (double)HRTIM_CLOCK_FREQ_F/2); // 3us 对应的计数器数，向上取整
-  comp2_start_num = (int16_t)ceil(comp2_start * (double)HRTIM_CLOCK_FREQ_F/2); // 300us 对应的计数器数，向上取整
+  comp1_start_num = (int16_t)ceil(comp1_start * (double)HRTIM_CLOCK_FREQ_F/HRTIM_TIMA_PRESCALER_DIV); // 2us 对应的计数器数，向上取整
+  comp2_start_num = (int16_t)ceil(comp2_start * (double)HRTIM_CLOCK_FREQ_F/HRTIM_TIMA_PRESCALER_DIV); // 2000us 对应的计数器数，向上取整
   /* USER CODE END HRTIM1_Init 1 */
   hhrtim1.Instance = HRTIM1;
   hhrtim1.Init.HRTIMInterruptResquests = HRTIM_IT_NONE;
@@ -60,8 +63,8 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  pTimeBaseCfg.Period = 36000;
-  pTimeBaseCfg.RepetitionCounter = 0x0;//1ms周期
+  pTimeBaseCfg.Period = 25000;
+  pTimeBaseCfg.RepetitionCounter = 0x9;//Master每10次(1ms*10)产生一次更新事件 => 10ms周期
   pTimeBaseCfg.PrescalerRatio = HRTIM_PRESCALERRATIO_DIV4;
   pTimeBaseCfg.Mode = HRTIM_MODE_CONTINUOUS;
   if (HAL_HRTIM_TimeBaseConfig(&hhrtim1, HRTIM_TIMERINDEX_MASTER, &pTimeBaseCfg) != HAL_OK)
@@ -87,14 +90,14 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  pCompareCfg.CompareValue = 18000;
+  pCompareCfg.CompareValue = 12500; // 12500 ticks 对应 500us，主频100MHz预分频4后25MHz，每tick40ns
   if (HAL_HRTIM_WaveformCompareConfig(&hhrtim1, HRTIM_TIMERINDEX_MASTER, HRTIM_COMPAREUNIT_1, &pCompareCfg) != HAL_OK)
   {
     Error_Handler();
   }
-  pTimeBaseCfg.Period = 36000;
+  pTimeBaseCfg.Period = 55000; // Timer A窗口约2200us（25MHz）
   pTimeBaseCfg.RepetitionCounter = 0x00;
-  pTimeBaseCfg.PrescalerRatio = HRTIM_PRESCALERRATIO_DIV2;
+  pTimeBaseCfg.PrescalerRatio = HRTIM_PRESCALERRATIO_DIV4;
   pTimeBaseCfg.Mode = HRTIM_MODE_SINGLESHOT_RETRIGGERABLE;
   if (HAL_HRTIM_TimeBaseConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, &pTimeBaseCfg) != HAL_OK)
   {
@@ -128,7 +131,7 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  pCompareCfg.CompareValue = comp1_start_num+72;
+  pCompareCfg.CompareValue = comp1_start_num + (int16_t)ceil(TA2_PULSE_WIDTH_US * (double)HRTIM_CLOCK_FREQ_F/HRTIM_TIMA_PRESCALER_DIV);
   pCompareCfg.AutoDelayedMode = HRTIM_AUTODELAYEDMODE_REGULAR;
   pCompareCfg.AutoDelayedTimeout = 0x0000;
 
@@ -141,7 +144,7 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  pCompareCfg.CompareValue = comp2_start_num+72;
+  pCompareCfg.CompareValue = comp2_start_num + (int16_t)ceil(TA2_PULSE_WIDTH_US * (double)HRTIM_CLOCK_FREQ_F/HRTIM_TIMA_PRESCALER_DIV);
 
   if (HAL_HRTIM_WaveformCompareConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A, HRTIM_COMPAREUNIT_4, &pCompareCfg) != HAL_OK)
   {
@@ -150,7 +153,7 @@ void MX_HRTIM1_Init(void)
   pOutputCfg.Polarity = HRTIM_OUTPUTPOLARITY_HIGH;
   //pOutputCfg.SetSource = HRTIM_OUTPUTSET_RESYNC;
   pOutputCfg.SetSource = HRTIM_OUTPUTSET_UPDATE;
-  pOutputCfg.ResetSource = HRTIM_OUTPUTRESET_TIMPER;
+  pOutputCfg.ResetSource = HRTIM_OUTPUTRESET_TIMCMP3;
   pOutputCfg.IdleMode = HRTIM_OUTPUTIDLEMODE_NONE;
   pOutputCfg.IdleLevel = HRTIM_OUTPUTIDLELEVEL_INACTIVE;
   pOutputCfg.FaultLevel = HRTIM_OUTPUTFAULTLEVEL_NONE;
