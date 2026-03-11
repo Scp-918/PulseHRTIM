@@ -49,6 +49,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/AD4007.c
     Core/Src/ble.c
     Core/Src/MAX30101.c
+    Core/Src/LSM9DS1_AG.c
 )
 
 # Add include paths
